@@ -1,14 +1,70 @@
 # Overture Integration for Cline
 
-Overture is an MCP server that displays your execution plans as visual flowcharts. Users can review, modify, and approve plans before you execute them.
+You have access to **Overture**, an MCP server that visualizes your execution plans as interactive flowcharts before you write any code.
 
-## Integration with Cline Plan Mode
+## Why Overture Exists
 
-Overture complements Cline's existing plan mode by providing:
-- Visual graph representation instead of text
-- Interactive branch selection
-- Dynamic field inputs for configuration
-- Real-time execution progress
+Every AI coding agent shares the same fundamental problem: the developer types a prompt, you start working, and they have **no visibility** into what you're planning. By the time they realize you went in the wrong direction, you've already written 200+ lines of code that needs to be discarded.
+
+**Overture solves this by making your plan visible, editable, and approvable before execution begins.**
+
+---
+
+## Critical: Extended Planning Mode
+
+**Your plans must be comprehensive, deeply detailed, and broken down to the atomic level.**
+
+Unlike simple 5-10 step outlines, Overture expects you to generate **fully decomposed plans** where every task is broken into its smallest meaningful units. This is not optional — thorough planning prevents wasted tokens, wasted time, and developer frustration.
+
+### Planning Requirements
+
+For every task you receive, your plan must include:
+
+1. **Atomic Decomposition**: Break every task into its smallest executable steps
+2. **Rich Node Details**: Every node needs title, description, complexity, expected output, and risks
+3. **Decision Points**: Use `decision` nodes whenever multiple valid approaches exist
+4. **Dynamic Fields**: Declare any inputs needed from the user (API keys, config, preferences)
+5. **Logical Dependencies**: Edges should reflect true execution order
+
+### Example: Good vs. Bad Planning
+
+**Bad Plan** (too vague):
+```
+1. Set up project
+2. Build landing page
+3. Deploy
+```
+
+**Good Plan** (properly decomposed):
+```
+1. Initialize Vite + React project with TypeScript
+2. Configure Tailwind CSS with custom theme
+3. Create Header component
+   - Logo placement and sizing
+   - Navigation items with responsive menu
+   - Dark mode toggle
+4. Create Hero section
+   - Headline and subheadline copy
+   - CTA button with hover states
+   - Background gradient/image
+   - Entrance animations
+5. Create Features section
+   - Grid layout (3 columns on desktop, 1 on mobile)
+   - Feature card component
+   - Icon selection for each feature
+6. Create Footer component
+   - Link groups
+   - Newsletter signup form
+   - Social media icons
+7. Add SEO meta tags and Open Graph
+8. Configure deployment (Vercel/Netlify)
+   - Environment variables
+   - Build configuration
+```
+
+Each of these becomes a node on the visual canvas.
+
+---
 
 ## MCP Tools
 
@@ -18,117 +74,143 @@ Use these tools via `use_mcp_tool` with server name `overture`:
 |------|-------|---------|
 | `submit_plan` | `{ plan_xml: string }` | Submit complete XML plan |
 | `stream_plan_chunk` | `{ xml_chunk: string }` | Stream XML incrementally |
-| `get_approval` | `{}` | Wait for user approval |
+| `get_approval` | `{}` | Wait for user approval (may return "pending" — call again) |
 | `update_node_status` | `{ node_id, status, output? }` | Update execution progress |
 | `plan_completed` | `{}` | Mark plan done |
 | `plan_failed` | `{ error: string }` | Mark plan failed |
 
+---
+
 ## XML Plan Schema
 
 ```xml
-<plan id="plan_id" title="Plan Title" agent="cline">
+<plan id="plan_id" title="Comprehensive Plan Title" agent="cline">
   <nodes>
-    <!-- Task node -->
+    <!-- Task node with full details -->
     <node id="n1" type="task" status="pending">
-      <title>Task title</title>
-      <description>What this task does</description>
+      <title>Clear, specific step title</title>
+      <description>
+        Detailed explanation of what this step accomplishes.
+        Include context about why this step is necessary.
+      </description>
       <complexity>low|medium|high</complexity>
-      <expected_output>Results of this task</expected_output>
-      <risks>Potential issues</risks>
+      <expected_output>
+        Specific deliverables: files created, APIs integrated, etc.
+      </expected_output>
+      <risks>
+        What could go wrong? How will you handle edge cases?
+      </risks>
 
-      <!-- Optional: Dynamic input fields -->
+      <!-- Dynamic fields for user input -->
       <dynamic_field
-        id="f1" name="var_name" type="string|secret|select|boolean|number"
-        required="true|false" title="Label" description="Help text"
-        value="default" options="a,b,c" setup_instructions="How to get this"
+        id="f1"
+        name="variable_name"
+        type="string|secret|select|boolean|number"
+        required="true|false"
+        title="Human-readable Label"
+        description="Help text explaining what this is for"
+        value="default_value"
+        options="opt1,opt2,opt3"
+        setup_instructions="How to obtain this value (e.g., 'Get from dashboard.stripe.com')"
       />
     </node>
 
-    <!-- Decision node -->
+    <!-- Decision node when multiple approaches are valid -->
     <node id="n2" type="decision" status="pending">
-      <title>Decision title</title>
-      <description>What to decide</description>
+      <title>What decision needs to be made</title>
+      <description>Context for why this choice matters</description>
 
-      <branch id="b1" label="Option 1">
-        <description>About this option</description>
-        <pros>Advantages</pros>
-        <cons>Disadvantages</cons>
+      <branch id="b1" label="Option 1 Name">
+        <description>What this approach entails</description>
+        <pros>Advantages of this choice</pros>
+        <cons>Disadvantages or tradeoffs</cons>
       </branch>
 
-      <branch id="b2" label="Option 2">
-        <description>About this option</description>
-        <pros>Advantages</pros>
-        <cons>Disadvantages</cons>
+      <branch id="b2" label="Option 2 Name">
+        <description>What this approach entails</description>
+        <pros>Advantages of this choice</pros>
+        <cons>Disadvantages or tradeoffs</cons>
       </branch>
     </node>
 
-    <!-- Task attached to a branch -->
+    <!-- Task that only runs if a specific branch is chosen -->
     <node id="n3" type="task" status="pending" branch_parent="n2" branch_id="b1">
-      <title>Task for Option 1</title>
-      <description>Only runs if Option 1 is selected</description>
+      <title>Task specific to Option 1</title>
+      <description>This only executes if the user selects Option 1</description>
+      <complexity>medium</complexity>
     </node>
   </nodes>
 
   <edges>
     <edge id="e1" from="n1" to="n2" />
+    <!-- Add edges for all dependencies -->
   </edges>
 </plan>
 ```
 
-## Example Usage
+---
 
-```xml
-<use_mcp_tool>
-<server_name>overture</server_name>
-<tool_name>submit_plan</tool_name>
-<arguments>
-{
-  "plan_xml": "<plan id=\"plan_001\" title=\"Create REST API\" agent=\"cline\"><nodes><node id=\"n1\" type=\"task\" status=\"pending\"><title>Set up Express server</title><description>Initialize Express.js with TypeScript</description><complexity>low</complexity></node></nodes><edges></edges></plan>"
-}
-</arguments>
-</use_mcp_tool>
+## Dynamic Field Types
+
+| Type | Use Case | Example |
+|------|----------|---------|
+| `string` | Text input | Project name, domain name |
+| `secret` | Sensitive data (masked) | API keys, tokens, passwords |
+| `select` | Choice from options | Database type, framework |
+| `boolean` | Yes/No toggle | Enable feature X? |
+| `number` | Numeric input | Port number, timeout |
+
+**Always add `setup_instructions`** for fields that require the user to obtain a value from an external source.
+
+---
+
+## Execution Workflow
+
+```
+1. Receive task from user
+2. Generate comprehensive XML plan (see planning requirements above)
+3. Call submit_plan (or stream_plan_chunk for incremental delivery)
+4. Call get_approval
+   - If status is "pending", wait and call again
+   - If status is "approved", proceed with fieldValues, selectedBranches, and nodeConfigs
+   - If status is "cancelled", stop
+5. For each node in execution order:
+   a. Check if node should be skipped (based on selectedBranches)
+   b. Call update_node_status(node_id, "active")
+   c. Execute the work, using:
+      - fieldValues for dynamic field inputs
+      - nodeConfigs[node_id].attachments for file references
+      - nodeConfigs[node_id].metaInstructions for user guidance
+   d. Call update_node_status(node_id, "completed", output)
+6. Call plan_completed
 ```
 
-Then wait for approval:
+---
 
-```xml
-<use_mcp_tool>
-<server_name>overture</server_name>
-<tool_name>get_approval</tool_name>
-<arguments>{}</arguments>
-</use_mcp_tool>
-```
+## What the User Can Do in Overture UI
 
-Update status during execution:
+Before approving, users can:
+- **View details** of any node by clicking it
+- **Fill in dynamic fields** (API keys, configuration)
+- **Select branches** at decision points
+- **Attach files** that you should reference during that node's execution
+- **Add instructions** specific to each node (meta instructions)
 
-```xml
-<use_mcp_tool>
-<server_name>overture</server_name>
-<tool_name>update_node_status</tool_name>
-<arguments>
-{
-  "node_id": "n1",
-  "status": "active"
-}
-</arguments>
-</use_mcp_tool>
-```
+All of this context is returned to you when they approve, so you can execute exactly what they want.
 
-## Workflow
-
-1. Generate comprehensive plan XML
-2. Call `submit_plan`
-3. Call `get_approval` (waits for user)
-4. When approved, iterate through nodes:
-   - `update_node_status(id, "active")`
-   - Do the work
-   - `update_node_status(id, "completed", output)`
-5. Call `plan_completed` when done
+---
 
 ## Best Practices
 
-- Use decision nodes when multiple approaches are valid
-- Add dynamic fields for any configuration needed at runtime
-- Break large tasks into smaller, trackable nodes
-- Always update status to "active" before starting a node
-- Include meaningful output in completed status updates
+1. **Over-plan, don't under-plan**: More nodes = more transparency = happier user
+2. **Use decision nodes liberally**: Don't assume — let the user choose
+3. **Add dynamic fields upfront**: Collect all config before starting execution
+4. **Be specific in descriptions**: Users should understand each step without guessing
+5. **Include risks**: Show you've thought about edge cases
+6. **Update status frequently**: Call `update_node_status` so users see progress
+7. **Handle meta instructions**: When a node has `metaInstructions`, follow them carefully
+8. **Reference attachments**: When a node has file attachments, read/use those files
+
+---
+
+> "The best time to shape the plan is before the first line of code is written." — Overture by Sixth

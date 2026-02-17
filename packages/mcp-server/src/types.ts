@@ -28,6 +28,7 @@ export interface FileAttachment {
   path: string;
   name: string;
   type: 'image' | 'code' | 'document' | 'other';
+  description: string;
 }
 
 export interface PlanNode {

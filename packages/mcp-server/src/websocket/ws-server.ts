@@ -5,18 +5,25 @@ import { planStore } from '../store/plan-store.js';
 class WebSocketManager {
   private wss: WebSocketServer | null = null;
   private clients: Set<WebSocket> = new Set();
+  private relayClient: WebSocket | null = null;
+  private port: number = 3030;
 
   start(port: number): void {
+    this.port = port;
+
     try {
       this.wss = new WebSocketServer({ port });
     } catch (err) {
-      console.error(`[Overture] WebSocket server failed to start on port ${port}:`, err);
+      console.error(`[Overture] WebSocket server failed to start on port ${port}, will try relay mode`);
+      this.connectAsRelay(port);
       return;
     }
 
     this.wss.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
-        console.error(`[Overture] WebSocket port ${port} already in use - another instance may be running`);
+        console.error(`[Overture] WebSocket port ${port} already in use - connecting as relay client`);
+        this.wss = null;
+        this.connectAsRelay(port);
       } else {
         console.error(`[Overture] WebSocket server error:`, err);
       }
@@ -54,8 +61,22 @@ class WebSocketManager {
 
       ws.on('message', (data) => {
         try {
-          const message: WSClientMessage = JSON.parse(data.toString());
-          this.handleClientMessage(message);
+          const message = JSON.parse(data.toString());
+
+          // Handle relay messages from other MCP server instances
+          if (message.type === 'relay' && message.payload) {
+            console.error('[Overture] Relaying message:', message.payload.type);
+            // Broadcast the relayed message to all UI clients
+            const relayData = JSON.stringify(message.payload);
+            for (const client of this.clients) {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(relayData);
+              }
+            }
+            return;
+          }
+
+          this.handleClientMessage(message as WSClientMessage);
         } catch (error) {
           console.error('[Overture] Failed to parse client message:', error);
         }
@@ -87,8 +108,39 @@ class WebSocketManager {
     }
   }
 
+  private connectAsRelay(port: number): void {
+    try {
+      this.relayClient = new WebSocket(`ws://localhost:${port}`);
+
+      this.relayClient.on('open', () => {
+        console.error('[Overture] Connected as relay client to existing server');
+      });
+
+      this.relayClient.on('error', (err) => {
+        console.error('[Overture] Relay client error:', err.message);
+        this.relayClient = null;
+      });
+
+      this.relayClient.on('close', () => {
+        console.error('[Overture] Relay client disconnected');
+        this.relayClient = null;
+      });
+    } catch (err) {
+      console.error('[Overture] Failed to connect as relay:', err);
+    }
+  }
+
   broadcast(message: WSMessage): void {
     const data = JSON.stringify(message);
+
+    // If we're in relay mode, send to the main server
+    if (this.relayClient && this.relayClient.readyState === WebSocket.OPEN) {
+      // Send as a relay message that the main server will broadcast
+      this.relayClient.send(JSON.stringify({ type: 'relay', payload: message }));
+      return;
+    }
+
+    // Otherwise broadcast to our own clients
     for (const client of this.clients) {
       if (client.readyState === WebSocket.OPEN) {
         client.send(data);
