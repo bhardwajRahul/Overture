@@ -93,6 +93,7 @@ export type WSMessage =
   | { type: 'plan_paused' }
   | { type: 'plan_resumed' }
   | { type: 'nodes_inserted'; nodes: PlanNode[]; edges: PlanEdge[]; removedEdgeIds: string[] }
+  | { type: 'node_removed'; nodeId: string; newEdges: PlanEdge[]; removedEdgeIds: string[] }
   | { type: 'error'; message: string };
 
 export type WSClientMessage =
@@ -106,4 +107,5 @@ export type WSClientMessage =
   | { type: 'rerun_request'; nodeId: string; mode: 'single' | 'to-bottom' }
   | { type: 'pause_execution' }
   | { type: 'resume_execution' }
-  | { type: 'insert_nodes'; afterNodeId: string; nodes: PlanNode[]; edges: PlanEdge[] };
+  | { type: 'insert_nodes'; afterNodeId: string; nodes: PlanNode[]; edges: PlanEdge[] }
+  | { type: 'remove_node'; nodeId: string };

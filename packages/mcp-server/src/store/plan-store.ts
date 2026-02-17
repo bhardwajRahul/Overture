@@ -313,6 +313,42 @@ class PlanStore {
 
     return { removedEdgeIds };
   }
+
+  // Remove a node and reconnect edges around it
+  removeNode(nodeId: string): { newEdges: PlanEdge[]; removedEdgeIds: string[] } {
+    // Find edges connected to this node
+    const incomingEdges = this.state.edges.filter(e => e.to === nodeId);
+    const outgoingEdges = this.state.edges.filter(e => e.from === nodeId);
+
+    const removedEdgeIds = [
+      ...incomingEdges.map(e => e.id),
+      ...outgoingEdges.map(e => e.id),
+    ];
+
+    // Create new edges to bridge the gap
+    const newEdges: PlanEdge[] = [];
+    let edgeCounter = Date.now();
+    for (const incoming of incomingEdges) {
+      for (const outgoing of outgoingEdges) {
+        newEdges.push({
+          id: `e_bridge_${edgeCounter++}`,
+          from: incoming.from,
+          to: outgoing.to,
+        });
+      }
+    }
+
+    // Remove the node
+    this.state.nodes = this.state.nodes.filter(n => n.id !== nodeId);
+
+    // Remove old edges and add new bridging edges
+    this.state.edges = [
+      ...this.state.edges.filter(e => e.to !== nodeId && e.from !== nodeId),
+      ...newEdges,
+    ];
+
+    return { newEdges, removedEdgeIds };
+  }
 }
 
 // Singleton instance

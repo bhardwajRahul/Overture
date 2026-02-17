@@ -125,12 +125,23 @@ class WebSocketManager {
 
       case 'insert_nodes':
         console.error(`[Overture] Inserting ${message.nodes.length} node(s) after ${message.afterNodeId}`);
-        const result = planStore.insertNodes(message.afterNodeId, message.nodes, message.edges);
+        const insertResult = planStore.insertNodes(message.afterNodeId, message.nodes, message.edges);
         this.broadcast({
           type: 'nodes_inserted',
           nodes: message.nodes,
           edges: message.edges,
-          removedEdgeIds: result.removedEdgeIds,
+          removedEdgeIds: insertResult.removedEdgeIds,
+        });
+        break;
+
+      case 'remove_node':
+        console.error(`[Overture] Removing node ${message.nodeId}`);
+        const removeResult = planStore.removeNode(message.nodeId);
+        this.broadcast({
+          type: 'node_removed',
+          nodeId: message.nodeId,
+          newEdges: removeResult.newEdges,
+          removedEdgeIds: removeResult.removedEdgeIds,
         });
         break;
     }
