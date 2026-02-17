@@ -20,12 +20,177 @@ export interface NextNodeInfo {
 }
 
 /**
+ * Get provider-specific MCP configuration instructions
+ */
+function getProviderMcpSetupInstructions(provider: string, serverName: string): string {
+  const normalizedProvider = provider.toLowerCase();
+
+  // Server name for config (use GitHub path or simple name)
+  const configServerName = serverName.includes('/')
+    ? serverName
+    : serverName.toLowerCase().replace(/\s+/g, '-');
+
+  switch (normalizedProvider) {
+    case 'cline':
+      return `
+### Cline MCP Setup Instructions
+
+**Configuration File Locations:**
+- macOS: ~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+- Windows: %APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev\\settings\\cline_mcp_settings.json
+- Linux: ~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+
+**Steps:**
+1. Open the MCP settings file at the location above
+2. Add the server configuration to the "mcpServers" object
+3. Save the file
+
+**Example Configuration:**
+\`\`\`json
+{
+  "mcpServers": {
+    "${configServerName}": {
+      "command": "uvx",
+      "args": ["mcp-server-name"],
+      "disabled": false
+    }
+  }
+}
+\`\`\`
+
+**Important:** Read the existing file first - DO NOT overwrite other servers!
+`;
+
+    case 'sixth':
+    case 'sixth-ai':
+      return `
+### Sixth AI MCP Setup Instructions
+
+**Configuration File Locations:**
+- macOS: ~/Library/Application Support/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json
+- Windows: %APPDATA%\\Code\\User\\globalStorage\\sixth.sixth-ai\\settings\\sixth-mcp-settings.json
+- Linux: ~/.config/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json
+
+**Steps:**
+1. Open the MCP settings file at the location above
+2. Add the server configuration to the "mcpServers" object
+3. Save the file
+
+**Example Configuration:**
+\`\`\`json
+{
+  "mcpServers": {
+    "${configServerName}": {
+      "command": "uvx",
+      "args": ["mcp-server-name"],
+      "disabled": false
+    }
+  }
+}
+\`\`\`
+
+**Important:** Read the existing file first - DO NOT overwrite other servers!
+`;
+
+    case 'cursor':
+      return `
+### Cursor MCP Setup Instructions
+
+**Configuration File Locations:**
+- Project-level: .cursor/mcp.json (in project root)
+- Global: ~/.cursor/mcp.json (user home directory)
+
+**Steps:**
+1. Create or open the mcp.json file at one of the locations above
+2. Add the server configuration
+3. Save the file
+4. Restart Cursor or reload the window
+
+**Example Configuration:**
+\`\`\`json
+{
+  "mcpServers": {
+    "${configServerName}": {
+      "command": "uvx",
+      "args": ["mcp-server-name"]
+    }
+  }
+}
+\`\`\`
+
+**Tip:** Use project-level config for project-specific tools, global for tools you want everywhere.
+`;
+
+    case 'claude-code':
+    case 'claude':
+      return `
+### Claude Code MCP Setup Instructions
+
+**Option 1: Using CLI (Recommended)**
+\`\`\`bash
+claude mcp add ${configServerName} --scope user
+\`\`\`
+
+**Option 2: Direct Configuration**
+- User scope: ~/.claude.json
+- Project scope: .mcp.json (in project root)
+
+**Steps for manual setup:**
+1. Open ~/.claude.json (create if it doesn't exist)
+2. Add the server configuration
+3. Save the file
+
+**Example Configuration:**
+\`\`\`json
+{
+  "mcpServers": {
+    "${configServerName}": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-name"]
+    }
+  }
+}
+\`\`\`
+
+**Verify Installation:**
+\`\`\`bash
+claude mcp list
+claude mcp get ${configServerName}
+\`\`\`
+`;
+
+    default:
+      return `
+### MCP Setup Instructions
+
+Please configure the MCP server according to your AI assistant's documentation.
+The server name to use: ${configServerName}
+
+**Common Configuration Format:**
+\`\`\`json
+{
+  "mcpServers": {
+    "${configServerName}": {
+      "command": "uvx",
+      "args": ["mcp-server-name"]
+    }
+  }
+}
+\`\`\`
+`;
+  }
+}
+
+/**
  * Format MCP server info with mandatory usage instructions
  */
-function formatMcpServerWithInstructions(mcpServer: McpServer | undefined): (McpServer & { formattedInstructions?: string }) | undefined {
+function formatMcpServerWithInstructions(mcpServer: McpServer | undefined, provider?: string): (McpServer & { formattedInstructions?: string }) | undefined {
   if (!mcpServer) return undefined;
 
   const usageDesc = (mcpServer as McpServer & { usageDescription?: string }).usageDescription || '';
+  const agentProvider = provider || 'unknown';
+  const providerSetupInstructions = getProviderMcpSetupInstructions(agentProvider, mcpServer.mcpId || mcpServer.name);
 
   const formattedInstructions = `
 === MCP SERVER INTEGRATION ===
@@ -39,12 +204,15 @@ ${usageDesc ? `=== USER'S INTENDED USAGE ===\n${usageDesc}\n` : ''}
 ${usageDesc ? `The user has specified their intent - follow it precisely.` : ''}
 
 **IF THE MCP SERVER IS NOT AVAILABLE OR NOT CONFIGURED:**
-You **MUST** follow the setup instructions provided in the MCP server's README.
-${mcpServer.requiresApiKey ? `\n**NOTE:** This MCP server requires an API key. Ensure the API key is configured before use.` : ''}
+You **MUST** install and configure it NOW. DO NOT skip to the next node.
+DO NOT proceed with the task until the MCP server is working.
 
-Setup Instructions:
-${mcpServer.readmeContent ? mcpServer.readmeContent.substring(0, 2000) : 'Refer to the GitHub repository for setup instructions: ' + mcpServer.githubUrl}
-${'='.repeat(30)}
+${providerSetupInstructions}
+
+${mcpServer.requiresApiKey ? `**NOTE:** This MCP server requires an API key. Ensure the API key is configured before use.\n` : ''}
+=== README / Installation Guide ===
+${mcpServer.readmeContent ? mcpServer.readmeContent.substring(0, 3000) : 'Refer to the GitHub repository for setup instructions: ' + mcpServer.githubUrl}
+${'='.repeat(50)}
 `.trim();
 
   return {
@@ -173,12 +341,10 @@ export function handleSubmitPlan(planXml: string): { success: boolean; message: 
  * Returns status: 'approved', 'cancelled', or 'pending'
  * If 'pending', the agent should call this again to continue waiting
  * When approved, includes the first node's information to start execution
+ * Each subsequent node's info is returned by update_node_status when the previous node completes
  */
 export async function handleGetApproval(): Promise<{
   status: 'approved' | 'cancelled' | 'pending';
-  fieldValues: Record<string, string>;
-  selectedBranches: Record<string, string>;
-  nodeConfigs: Record<string, { fieldValues: Record<string, string>; attachments: { path: string; name: string; type: string }[]; metaInstructions?: string; mcpServer?: McpServer }>;
   firstNode?: NextNodeInfo;
   message: string;
 }> {
@@ -189,6 +355,8 @@ export async function handleGetApproval(): Promise<{
     planStore.updatePlanStatus('executing');
 
     // Find the first node (node with no incoming edges)
+    const plan = planStore.getPlan();
+    const provider = plan?.agent || 'unknown';
     const nodes = planStore.getNodes();
     const edges = planStore.getEdges();
     const nodeConfigs = planStore.getNodeConfigs();
@@ -207,26 +375,20 @@ export async function handleGetApproval(): Promise<{
         fieldValues: config.fieldValues || {},
         attachments: config.attachments || [],
         metaInstructions: config.metaInstructions,
-        mcpServer: formatMcpServerWithInstructions(config.mcpServer),
+        mcpServer: formatMcpServerWithInstructions(config.mcpServer, provider),
       };
     }
 
     return {
       status: 'approved',
-      fieldValues: planStore.getFieldValues(),
-      selectedBranches: planStore.getSelectedBranches(),
-      nodeConfigs: planStore.getNodeConfigs(),
       firstNode: firstNodeInfo,
-      message: 'Plan approved by user',
+      message: 'Plan approved by user. Execute firstNode, then call update_node_status to get the next node.',
     };
   }
 
   if (result === 'cancelled') {
     return {
       status: 'cancelled',
-      fieldValues: {},
-      selectedBranches: {},
-      nodeConfigs: {},
       message: 'Plan cancelled by user',
     };
   }
@@ -234,9 +396,6 @@ export async function handleGetApproval(): Promise<{
   // Pending - user hasn't approved yet, agent should call again
   return {
     status: 'pending',
-    fieldValues: {},
-    selectedBranches: {},
-    nodeConfigs: {},
     message: 'Waiting for user approval. Call get_approval again to continue waiting.',
   };
 }
@@ -293,6 +452,8 @@ export function handleUpdateNodeStatus(
   isLastNode?: boolean;
   isPaused?: boolean;
 } {
+  const plan = planStore.getPlan();
+  const provider = plan?.agent || 'unknown';
   const nodes = planStore.getNodes();
   const edges = planStore.getEdges();
   const node = nodes.find((n) => n.id === nodeId);
@@ -309,7 +470,7 @@ export function handleUpdateNodeStatus(
 
   // If status is 'completed', find and return the next node's info
   if (status === 'completed') {
-    const nextNodeInfo = findNextNode(nodeId, nodes, edges);
+    const nextNodeInfo = findNextNode(nodeId, nodes, edges, provider);
 
     if (nextNodeInfo) {
       return {
@@ -342,7 +503,8 @@ export function handleUpdateNodeStatus(
 function findNextNode(
   currentNodeId: string,
   nodes: ReturnType<typeof planStore.getNodes>,
-  edges: ReturnType<typeof planStore.getEdges>
+  edges: ReturnType<typeof planStore.getEdges>,
+  provider: string
 ): NextNodeInfo | null {
   const selectedBranches = planStore.getSelectedBranches();
   const nodeConfigs = planStore.getNodeConfigs();
@@ -380,7 +542,7 @@ function findNextNode(
       fieldValues: config.fieldValues || {},
       attachments: config.attachments || [],
       metaInstructions: config.metaInstructions,
-      mcpServer: formatMcpServerWithInstructions(config.mcpServer),
+      mcpServer: formatMcpServerWithInstructions(config.mcpServer, provider),
     };
   }
 
@@ -390,7 +552,7 @@ function findNextNode(
     const skippedNode = nodes.find(n => n.id === edge.to);
     if (skippedNode) {
       // Recursively find the next node after this skipped one
-      const nextAfterSkipped = findNextNode(skippedNode.id, nodes, edges);
+      const nextAfterSkipped = findNextNode(skippedNode.id, nodes, edges, provider);
       if (nextAfterSkipped) {
         return nextAfterSkipped;
       }
@@ -448,7 +610,9 @@ export async function handleCheckRerun(timeoutMs: number = 5000): Promise<{
 
   // Update plan status back to executing
   planStore.updatePlanStatus('executing');
-  wsManager.broadcast({ type: 'plan_started', plan: planStore.getPlan()! });
+  const plan = planStore.getPlan();
+  const provider = plan?.agent || 'unknown';
+  wsManager.broadcast({ type: 'plan_started', plan: plan! });
 
   // Get the node info for the rerun start node
   const nodes = planStore.getNodes();
@@ -466,7 +630,7 @@ export async function handleCheckRerun(timeoutMs: number = 5000): Promise<{
       fieldValues: config.fieldValues || {},
       attachments: config.attachments || [],
       metaInstructions: config.metaInstructions,
-      mcpServer: formatMcpServerWithInstructions(config.mcpServer),
+      mcpServer: formatMcpServerWithInstructions(config.mcpServer, provider),
     };
   }
 

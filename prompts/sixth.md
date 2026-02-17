@@ -1,4 +1,4 @@
-# Overture Integration for Claude Code
+# Overture Integration for Sixth AI
 
 You have access to **Overture**, an MCP server that visualizes your execution plans as interactive flowcharts before you write any code.
 
@@ -7,23 +7,6 @@ You have access to **Overture**, an MCP server that visualizes your execution pl
 Every AI coding agent shares the same fundamental problem: the developer types a prompt, you start working, and they have **no visibility** into what you're planning. By the time they realize you went in the wrong direction, you've already written 200+ lines of code that needs to be discarded.
 
 **Overture solves this by making your plan visible, editable, and approvable before execution begins.**
-
----
-
-## When to Use Overture
-
-**USE** Overture for any task involving:
-- Multiple steps or files to create/modify
-- Architectural decisions the user should weigh in on
-- User configuration (API keys, preferences, settings)
-- Complex implementations with multiple valid approaches
-- Tasks where getting alignment upfront saves significant rework
-
-**DO NOT USE** Overture for:
-- Simple questions or explanations
-- Single-file, small edits
-- Quick bug fixes with obvious solutions
-- Research or exploration tasks
 
 ---
 
@@ -43,69 +26,54 @@ For every task you receive, your plan must include:
 4. **Dynamic Fields**: Declare any inputs needed from the user (API keys, config, preferences)
 5. **Logical Dependencies**: Edges should reflect true execution order
 
-### Example: Proper Decomposition
+### Example: Good vs. Bad Planning
 
-If a user asks for "a full-stack e-commerce app with Stripe integration," your plan should include nodes like:
+**Bad Plan** (too vague):
+```
+1. Set up project
+2. Build landing page
+3. Deploy
+```
 
-**Project Setup Phase:**
-- Initialize Next.js project with TypeScript and App Router
-- Configure Tailwind CSS and component library
-- Set up ESLint and Prettier configuration
-- Initialize Git repository with .gitignore
+**Good Plan** (properly decomposed):
+```
+1. Initialize Vite + React project with TypeScript
+2. Configure Tailwind CSS with custom theme
+3. Create Header component
+   - Logo placement and sizing
+   - Navigation items with responsive menu
+   - Dark mode toggle
+4. Create Hero section
+   - Headline and subheadline copy
+   - CTA button with hover states
+   - Background gradient/image
+   - Entrance animations
+5. Create Features section
+   - Grid layout (3 columns on desktop, 1 on mobile)
+   - Feature card component
+   - Icon selection for each feature
+6. Create Footer component
+   - Link groups
+   - Newsletter signup form
+   - Social media icons
+7. Add SEO meta tags and Open Graph
+8. Configure deployment (Vercel/Netlify)
+   - Environment variables
+   - Build configuration
+```
 
-**Database Phase:**
-- Decision node: Choose database (PostgreSQL vs Planetscale vs Supabase)
-- Configure Prisma ORM with selected database
-- Create database schema (products, users, orders, cart)
-- Set up database migrations
-
-**Authentication Phase:**
-- Decision node: Choose auth approach (NextAuth vs Clerk vs custom)
-- Implement sign up flow with email verification
-- Implement login flow with session management
-- Add password reset functionality
-
-**Product Catalog:**
-- Create Product model and API routes
-- Build product listing page with filters
-- Build product detail page
-- Implement search functionality
-
-**Shopping Cart:**
-- Create Cart context/store
-- Build cart drawer/page component
-- Implement add/remove/update quantity
-- Add cart persistence (localStorage + database sync)
-
-**Stripe Integration:**
-- Configure Stripe API keys
-- Create checkout session endpoint
-- Build checkout page with Stripe Elements
-- Implement webhook handler for payment events
-- Handle success/failure states
-
-**Order Management:**
-- Create Order model and API routes
-- Build order confirmation page
-- Implement order history page
-- Add email notifications
-
-**Deployment:**
-- Decision node: Choose platform (Vercel vs Railway vs custom)
-- Configure environment variables
-- Set up CI/CD pipeline
-- Configure production database
-
-Each of these becomes a node on the visual canvas with full details, risks, and expected outputs.
+Each of these becomes a node on the visual canvas.
 
 ---
 
 ## MCP Tools
 
+Use these tools via `use_mcp_tool` with server name `overture`:
+
 | Tool | Input | Purpose |
 |------|-------|---------|
 | `submit_plan` | `{ plan_xml: string }` | Submit complete XML plan |
-| `stream_plan_chunk` | `{ xml_chunk: string }` | Stream XML incrementally for real-time display |
+| `stream_plan_chunk` | `{ xml_chunk: string }` | Stream XML incrementally |
 | `get_approval` | `{}` | Wait for user approval (may return "pending" — call again) |
 | `update_node_status` | `{ node_id, status, output? }` | Update execution progress |
 | `plan_completed` | `{}` | Mark plan done |
@@ -118,7 +86,7 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
 ## XML Plan Schema
 
 ```xml
-<plan id="plan_001" title="Comprehensive Plan Title" agent="claude-code">
+<plan id="plan_id" title="Comprehensive Plan Title" agent="sixth">
   <nodes>
     <!-- Task node with full details -->
     <node id="n1" type="task" status="pending">
@@ -126,123 +94,58 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
       <description>
         Detailed explanation of what this step accomplishes.
         Include context about why this step is necessary.
-        Explain the technical approach you'll take.
       </description>
       <complexity>low|medium|high</complexity>
       <expected_output>
-        Specific deliverables:
-        - Files created: src/components/Button.tsx
-        - APIs integrated: Stripe checkout session
-        - Database changes: New User table
+        Specific deliverables: files created, APIs integrated, etc.
       </expected_output>
       <risks>
-        What could go wrong? Edge cases to handle?
-        - Risk: API rate limiting
-        - Mitigation: Implement exponential backoff
+        What could go wrong? How will you handle edge cases?
       </risks>
 
       <!-- Dynamic fields for user input -->
       <dynamic_field
         id="f1"
-        name="stripe_secret_key"
-        type="secret"
-        required="true"
-        title="Stripe Secret Key"
-        description="Your Stripe secret API key for payment processing"
-        setup_instructions="Get from dashboard.stripe.com/apikeys. Use test key (sk_test_...) for development."
-      />
-
-      <dynamic_field
-        id="f2"
-        name="enable_typescript"
-        type="boolean"
-        required="false"
-        title="Enable TypeScript"
-        description="Use TypeScript for type safety"
-        value="true"
-      />
-
-      <dynamic_field
-        id="f3"
-        name="css_framework"
-        type="select"
-        required="true"
-        title="CSS Framework"
-        description="Choose your styling approach"
-        options="Tailwind CSS,CSS Modules,Styled Components,Plain CSS"
-        value="Tailwind CSS"
+        name="variable_name"
+        type="string|secret|select|boolean|number"
+        required="true|false"
+        title="Human-readable Label"
+        description="Help text explaining what this is for"
+        value="default_value"
+        options="opt1,opt2,opt3"
+        setup_instructions="How to obtain this value (e.g., 'Get from dashboard.stripe.com')"
       />
     </node>
 
     <!-- Decision node when multiple approaches are valid -->
     <node id="n2" type="decision" status="pending">
-      <title>Select Authentication Strategy</title>
-      <description>
-        Choose how users will authenticate with your application.
-        This affects security model, user experience, and maintenance burden.
-      </description>
+      <title>What decision needs to be made</title>
+      <description>Context for why this choice matters</description>
 
-      <branch id="b1" label="NextAuth.js">
-        <description>Full-featured auth library with provider support</description>
-        <pros>Many OAuth providers, session management, database adapters</pros>
-        <cons>Can be complex to customize, learning curve</cons>
+      <branch id="b1" label="Option 1 Name">
+        <description>What this approach entails</description>
+        <pros>Advantages of this choice</pros>
+        <cons>Disadvantages or tradeoffs</cons>
       </branch>
 
-      <branch id="b2" label="Clerk">
-        <description>Managed authentication service</description>
-        <pros>Beautiful UI components, easy setup, handles edge cases</pros>
-        <cons>Third-party dependency, potential vendor lock-in, costs at scale</cons>
-      </branch>
-
-      <branch id="b3" label="Custom JWT">
-        <description>Build authentication from scratch</description>
-        <pros>Full control, no dependencies, deep understanding</pros>
-        <cons>Security risks if done wrong, more code to maintain</cons>
+      <branch id="b2" label="Option 2 Name">
+        <description>What this approach entails</description>
+        <pros>Advantages of this choice</pros>
+        <cons>Disadvantages or tradeoffs</cons>
       </branch>
     </node>
 
-    <!-- Task linked to a specific branch -->
+    <!-- Task that only runs if a specific branch is chosen -->
     <node id="n3" type="task" status="pending" branch_parent="n2" branch_id="b1">
-      <title>Configure NextAuth.js</title>
-      <description>
-        Set up NextAuth.js with email/password and OAuth providers.
-        Configure session strategy and database adapter.
-      </description>
+      <title>Task specific to Option 1</title>
+      <description>This only executes if the user selects Option 1</description>
       <complexity>medium</complexity>
-      <expected_output>
-        - /app/api/auth/[...nextauth]/route.ts configured
-        - Prisma adapter connected
-        - Google OAuth provider enabled
-        - Session callback customized
-      </expected_output>
-      <risks>
-        - OAuth redirect URLs must match exactly
-        - Database session table must exist
-      </risks>
-
-      <dynamic_field
-        id="f4"
-        name="google_client_id"
-        type="string"
-        required="true"
-        title="Google OAuth Client ID"
-        setup_instructions="Create at console.cloud.google.com/apis/credentials"
-      />
-
-      <dynamic_field
-        id="f5"
-        name="google_client_secret"
-        type="secret"
-        required="true"
-        title="Google OAuth Client Secret"
-        setup_instructions="From the same OAuth 2.0 Client ID"
-      />
     </node>
   </nodes>
 
   <edges>
     <edge id="e1" from="n1" to="n2" />
-    <edge id="e2" from="n2" to="n3" />
+    <!-- Add edges for all dependencies -->
   </edges>
 </plan>
 ```
@@ -251,15 +154,15 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
 
 ## Dynamic Field Types
 
-| Type | Use Case | Required Attributes |
-|------|----------|---------------------|
-| `string` | Text input | `name`, `title` |
-| `secret` | Masked input for sensitive data | `name`, `title`, `setup_instructions` |
-| `select` | Dropdown options | `name`, `title`, `options` (comma-separated) |
-| `boolean` | Toggle switch | `name`, `title` |
-| `number` | Numeric input | `name`, `title` |
+| Type | Use Case | Example |
+|------|----------|---------|
+| `string` | Text input | Project name, domain name |
+| `secret` | Sensitive data (masked) | API keys, tokens, passwords |
+| `select` | Choice from options | Database type, framework |
+| `boolean` | Yes/No toggle | Enable feature X? |
+| `number` | Numeric input | Port number, timeout |
 
-**Always include `setup_instructions`** when the user needs to obtain a value from an external service.
+**Always add `setup_instructions`** for fields that require the user to obtain a value from an external source.
 
 ---
 
@@ -309,16 +212,13 @@ Before calling `update_node_status(node_id, "completed", output)`, verify:
 
 ```
 1. Receive task from user
-2. Analyze task complexity
-   - If simple (single file, obvious fix): execute directly without Overture
-   - If complex (multiple files, decisions, config needed): use Overture
-3. Generate comprehensive XML plan
-4. Call submit_plan (or stream_plan_chunk for incremental display)
-5. Call get_approval and handle response:
-   - status: "pending" → call get_approval again (user is still reviewing)
-   - status: "approved" → you receive firstNode with all its config
-   - status: "cancelled" → stop and inform user
-6. FOR EACH NODE (starting with firstNode), execute in this EXACT order:
+2. Generate comprehensive XML plan (see planning requirements above)
+3. Call submit_plan (or stream_plan_chunk for incremental delivery)
+4. Call get_approval
+   - If status is "pending", wait and call again
+   - If status is "approved", you receive firstNode with all its config
+   - If status is "cancelled", stop
+5. FOR EACH NODE (starting with firstNode), execute in this EXACT order:
    a. Call update_node_status(node_id, "active")
 
    b. **FIRST: CHECK FOR MCP SERVER** ← THIS IS MANDATORY
@@ -337,13 +237,12 @@ Before calling `update_node_status(node_id, "completed", output)`, verify:
    d. Call update_node_status(node_id, "completed", output)
    e. Check response: if isPaused is true, call check_pause({ wait: true })
    f. Get nextNode from response, or isLastNode: true
-   g. If error: update_node_status(node_id, "failed", error) and plan_failed(error)
 
-7. Repeat step 6 for each nextNode until isLastNode is true
-8. Call plan_completed when all nodes succeed
+6. Repeat step 5 for each nextNode until isLastNode is true
+7. Call plan_completed
 ```
 
-### ⚠️ MCP SERVER CHECK IS STEP 6b - DO NOT SKIP
+### ⚠️ MCP SERVER CHECK IS STEP 5b - DO NOT SKIP
 
 When you receive ANY node (firstNode or nextNode), your **FIRST ACTION** after marking it active must be:
 
@@ -402,7 +301,7 @@ You MUST:
 }
 ```
 
-**Note:** Each node's configuration is included directly in the node object. You receive nodes one at a time — `firstNode` from `get_approval`, then `nextNode` from each `update_node_status` call.
+**Note:** Each node's configuration (fieldValues, attachments, metaInstructions, mcpServer) is included directly in the node object. You receive nodes one at a time — `firstNode` from `get_approval`, then `nextNode` from each `update_node_status` call.
 
 ### update_node_status (when completed)
 ```json
@@ -436,7 +335,14 @@ When it's the last node:
   "hasRerun": true,
   "nodeId": "n3",
   "mode": "single",  // or "to-bottom"
-  "nodeInfo": { ... },
+  "nodeInfo": {
+    "id": "n3",
+    "title": "Alternative Implementation",
+    "type": "task",
+    "fieldValues": { ... },
+    "attachments": [ ... ],
+    "metaInstructions": "..."
+  },
   "message": "Rerun requested from node n3 (single)"
 }
 ```
@@ -464,64 +370,37 @@ After completing a node:
 }
 ```
 
-### check_pause Response (after waiting)
-```json
-{
-  "isPaused": false,
-  "wasResumed": true,
-  "message": "Execution was paused and has now been resumed"
-}
-```
-
 ---
 
 ## Re-run Workflow
 
-After `plan_completed`, users can click re-run buttons on any node:
-- **Play icon**: Re-run just that single node
-- **Play + down arrow**: Re-run from that node to the end of the plan
-
-This allows users to:
-1. Fix a failed node and re-run it
-2. Try an alternative branch after completing the initial branch
-3. Re-execute part of the plan with different inputs
+After `plan_completed`, users can click nodes to re-run them:
+- **Single node**: Re-run just that node
+- **To bottom**: Re-run from that node to the end
 
 ```
 1. Call plan_completed when done
-2. Loop: call check_rerun (with short timeout)
-   - If hasRerun is false, continue checking or exit
+2. Loop: call check_rerun (with short timeout like 5000ms)
+   - If hasRerun is false, continue looping or exit after some time
    - If hasRerun is true:
-     a. Execute nodeInfo (same as normal node execution)
+     a. Execute the nodeInfo returned (same as normal execution)
      b. If mode is "to-bottom", continue to subsequent nodes
-     c. Call plan_completed again
-     d. Return to step 2
+     c. Call plan_completed again when done
+     d. Return to step 2 to check for more reruns
 ```
 
 ---
 
-## Handling User Additions
+## What the User Can Do in Overture UI
 
-Each node you receive (via `firstNode` or `nextNode`) includes all user customizations directly:
+Before approving, users can:
+- **View details** of any node by clicking it
+- **Fill in dynamic fields** (API keys, configuration)
+- **Select branches** at decision points
+- **Attach files** that you should reference during that node's execution
+- **Add instructions** specific to each node (meta instructions)
 
-```json
-{
-  "id": "n1",
-  "title": "Initialize Project",
-  "fieldValues": { "api_key": "sk_test_..." },
-  "attachments": [
-    { "path": "/Users/dev/project/design.figma", "name": "design.figma", "type": "other" },
-    { "path": "/Users/dev/project/api-spec.yaml", "name": "api-spec.yaml", "type": "code" }
-  ],
-  "metaInstructions": "Use the exact colors from the Figma file. Follow the API spec strictly.",
-  "mcpServer": { ... }
-}
-```
-
-**Attachments**: Read these files and incorporate their content into your work for that node.
-
-**Meta Instructions**: These are specific directives from the user for how to execute this node. Follow them precisely.
-
-**MCP Server**: If present, use the MCP server as specified in `formattedInstructions`. See the MCP Server Integration section below.
+All of this context is returned to you when they approve, so you can execute exactly what they want.
 
 ---
 
@@ -561,43 +440,30 @@ When `mcpServer` is present on a node:
 
 ### Setup Instructions (When MCP Server Not Available)
 
-The `mcpServer.formattedInstructions` field now includes **provider-specific setup instructions** tailored for Claude Code. Follow them exactly.
+The `mcpServer.formattedInstructions` field now includes **provider-specific setup instructions** tailored for Sixth AI. Follow them exactly.
 
-**Claude Code MCP Configuration:**
-
-**Option 1: Using CLI (Recommended)**
-```bash
-claude mcp add server-name --scope user
-```
-
-**Option 2: Direct Configuration**
-- **User scope:** `~/.claude.json`
-- **Project scope:** `.mcp.json` (in project root)
+**Sixth AI MCP Configuration File Locations:**
+- **macOS:** `~/Library/Application Support/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json`
+- **Windows:** `%APPDATA%\Code\User\globalStorage\sixth.sixth-ai\settings\sixth-mcp-settings.json`
+- **Linux:** `~/.config/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json`
 
 **Setup Steps:**
-1. **Use CLI** or open the config file
-2. **Read existing config** if it exists — DO NOT overwrite other servers
-3. **Add the new server** configuration
-4. **Save the file**
-5. **Verify** using `claude mcp list` or by calling one of the MCP server's tools
+1. **Read the existing MCP settings file** — DO NOT overwrite other servers
+2. **Add the new server** to the `"mcpServers"` object
+3. **Save the file**
+4. **Verify** by calling one of the MCP server's tools
 
 **Example Configuration:**
 ```json
 {
   "mcpServers": {
     "server-name": {
-      "type": "stdio",
       "command": "uvx",
-      "args": ["mcp-server-name"]
+      "args": ["mcp-server-name"],
+      "disabled": false
     }
   }
 }
-```
-
-**Verification Commands:**
-```bash
-claude mcp list
-claude mcp get server-name
 ```
 
 ### Setup Workflow
@@ -607,12 +473,10 @@ claude mcp get server-name
 2. If you get "No connection found" error:
    a. Read mcpServer.formattedInstructions for provider-specific setup
    b. Read mcpServer.readmeContent for installation commands
-   c. Use `claude mcp add` or edit config file directly
-   d. Read existing config (DO NOT OVERWRITE existing servers)
-   e. Add the new server configuration
-   f. Install dependencies (uvx, pip, etc.)
-   g. Verify with `claude mcp list`
-   h. Retry the MCP tool call to verify installation
+   c. Read existing MCP settings file (DO NOT OVERWRITE existing servers)
+   d. Add the new server configuration
+   e. Install dependencies (uvx, pip, etc.)
+   f. Retry the MCP tool call to verify installation
 3. Once working, use the MCP server for the node's task
 ```
 
@@ -631,42 +495,15 @@ Users attach MCP servers because they want specific capabilities for specific no
 
 ## Best Practices
 
-1. **Decompose thoroughly**: One action per node. "Set up project" is too vague; "Initialize Vite with React and TypeScript" is specific.
-
-2. **Use decision nodes liberally**: Whenever you'd normally make an assumption about approach, create a decision node instead.
-
-3. **Declare all inputs upfront**: Every API key, credential, or config value needed at runtime should be a dynamic field.
-
-4. **Be specific in descriptions**: Users should understand exactly what will happen without ambiguity.
-
-5. **Document expected outputs**: List specific files, functions, or changes that will result from each node.
-
-6. **Include risks and mitigations**: Show you've thought about what could go wrong.
-
-7. **Update status in real-time**: Call `update_node_status("active")` before starting and `update_node_status("completed", output)` when done.
-
-8. **Honor user additions**: Always check for and follow `metaInstructions`. Always read and use `attachments`.
-
-9. **Stream for long plans**: Use `stream_plan_chunk` for plans with many nodes so users see progress immediately.
-
-10. **Honor MCP servers**: When a node has `mcpServer`, follow its `formattedInstructions` precisely — this is the user's explicit request for extended capabilities.
-
----
-
-## The Value Proposition
-
-**Without Overture:**
-- User: "Build me an e-commerce site"
-- You: Start coding immediately
-- 20 minutes later: User realizes you used MongoDB when they wanted PostgreSQL
-- Result: Wasted tokens, wasted time, frustrated user
-
-**With Overture:**
-- User: "Build me an e-commerce site"
-- You: Generate detailed plan with database decision node
-- User: Reviews plan, selects PostgreSQL, adds Stripe API key, attaches design file
-- You: Execute exactly what they approved with their exact inputs
-- Result: Perfect alignment, happy user
+1. **Over-plan, don't under-plan**: More nodes = more transparency = happier user
+2. **Use decision nodes liberally**: Don't assume — let the user choose
+3. **Add dynamic fields upfront**: Collect all config before starting execution
+4. **Be specific in descriptions**: Users should understand each step without guessing
+5. **Include risks**: Show you've thought about edge cases
+6. **Update status frequently**: Call `update_node_status` so users see progress
+7. **Handle meta instructions**: When a node has `metaInstructions`, follow them carefully
+8. **Reference attachments**: When a node has file attachments, read/use those files
+9. **Honor MCP servers**: When a node has `mcpServer`, follow its `formattedInstructions` precisely
 
 ---
 

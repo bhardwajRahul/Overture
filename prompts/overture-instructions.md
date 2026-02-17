@@ -247,4 +247,130 @@ plan_failed("Installation failed due to network error")
 
 ---
 
+## CRITICAL: Node-by-Node Execution (DO NOT OVER-IMPLEMENT)
+
+⚠️ **MANDATORY EXECUTION RULES** ⚠️
+
+When executing an Overture plan, you MUST follow these rules EXACTLY:
+
+### Rule 1: ONE NODE AT A TIME
+- Execute ONLY the current node returned by `get_approval` or `update_node_status`
+- Do NOT look ahead to future nodes
+- Do NOT implement multiple nodes at once
+- Do NOT "optimize" by combining nodes
+
+### Rule 2: COMPLETE NODE CONSUMPTION
+For each node, you MUST implement/consume ALL of the following:
+- ✅ `title` - The task title
+- ✅ `description` - Full task description
+- ✅ `instructions` - Detailed implementation instructions
+- ✅ `fieldValues` - All dynamic field values provided by user
+- ✅ `mcpServer` - **CRITICAL**: If present, MUST be installed and used
+- ✅ `attachments` - All attached files/resources
+- ✅ `expected_output` - What the node should produce
+- ✅ `metadata` - Any additional metadata
+
+### Rule 3: MCP Server Integration
+If a node has an `mcpServer` attached:
+1. **CHECK** if the MCP server is already installed
+2. **INSTALL** the MCP server if not available (see setup instructions below)
+3. **USE** the MCP server tools as specified in the node
+4. **DO NOT** skip the node or proceed without the MCP server
+
+### Rule 4: No Over-Implementation
+❌ **NEVER DO THESE:**
+- Skip to future nodes
+- Implement features not in the current node
+- "Anticipate" what future nodes might need
+- Add "improvements" beyond the node scope
+- Ignore MCP server requirements
+
+✅ **ALWAYS DO THESE:**
+- Focus only on current node content
+- Implement exactly what the node specifies
+- Use all provided field values
+- Install and use required MCP servers
+- Update node status after completion
+
+---
+
+## MCP Server Setup Instructions (Sixth AI)
+
+When a node requires an MCP server that is not installed, follow these steps:
+
+### Configuration File Location
+**Sixth AI uses this MCP configuration file:**
+- **macOS**: `~/Library/Application Support/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json`
+- **Windows**: `%APPDATA%\Code\User\globalStorage\sixth.sixth-ai\settings\sixth-mcp-settings.json`
+- **Linux**: `~/.config/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json`
+
+### Setup Steps
+
+1. **Read the current MCP settings file** (create if it doesn't exist)
+2. **Add the new server configuration** to the `mcpServers` object
+3. **Save the file**
+4. **Restart or refresh** the MCP connection
+
+### Configuration Format
+
+```json
+{
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["-y", "@package/mcp-server"],
+      "env": {
+        "API_KEY": "your-api-key"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+### Example: Adding a New MCP Server
+
+If the node specifies an MCP server like:
+```json
+{
+  "name": "github",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+  }
+}
+```
+
+Add it to the configuration file:
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_xxxxxxxxxxxx"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+### Handling "No connection found" Error
+
+⚠️ **IMPORTANT**: If you receive a "No connection found for MCP server" error:
+
+1. **DO NOT** skip the node
+2. **DO NOT** proceed without the MCP server
+3. **DO** follow the setup instructions above
+4. **DO** install the MCP server
+5. **DO** retry the connection after installation
+6. **DO** complete the node requirements using the MCP tools
+
+---
+
 **Remember**: The visual plan is the user's way of understanding and controlling your work. Make it comprehensive, clear, and easy to follow. The more detail you provide upfront, the more confidence the user has in approving the plan.

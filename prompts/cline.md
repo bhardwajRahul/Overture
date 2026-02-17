@@ -166,6 +166,48 @@ Use these tools via `use_mcp_tool` with server name `overture`:
 
 ---
 
+## CRITICAL: Node-by-Node Execution (DO NOT OVER-IMPLEMENT)
+
+**YOU MUST ONLY IMPLEMENT THE CURRENT NODE.** This is non-negotiable.
+
+When you receive a node (via `firstNode` from `get_approval` or `nextNode` from `update_node_status`), you must:
+
+### DO:
+- **ONLY** implement what is described in that specific node's `title` and `description`
+- **CONSUME ALL** fields in `fieldValues` — every single one must be used
+- **READ AND USE ALL** files in `attachments` — do not ignore any attached file
+- **FOLLOW EXACTLY** the `metaInstructions` if present — these are user directives
+- **USE THE MCP SERVER** as specified in `mcpServer.formattedInstructions` if present
+- **RESPECT** the node's `complexity`, `expectedOutput`, and `risks`
+
+### DO NOT:
+- Implement tasks from future nodes
+- "Get ahead" by doing work not specified in the current node
+- Skip any field, attachment, or instruction in the current node
+- Assume what comes next — wait for the next node
+- Add features or functionality not explicitly in the node description
+
+### Why This Matters
+
+Each node is a contract. The user approved a specific plan with specific nodes. If you over-implement:
+- You break the visual progress tracking (nodes won't match actual work)
+- You may contradict decisions the user will make in future nodes
+- You waste tokens on work that might need to be redone
+- You violate the user's trust in the plan they approved
+
+### Checklist Before Completing a Node
+
+Before calling `update_node_status(node_id, "completed", output)`, verify:
+- [ ] **Did I check for `mcpServer` FIRST?** (If present, did I install it if needed?)
+- [ ] **Did I USE the `mcpServer` tools** as specified in `formattedInstructions`? (if present)
+- [ ] Did I implement ONLY what this node's description specified?
+- [ ] Did I use EVERY value in `fieldValues`?
+- [ ] Did I read and incorporate EVERY file in `attachments`?
+- [ ] Did I follow the `metaInstructions` exactly?
+- [ ] Did I NOT do any work belonging to other nodes?
+
+---
+
 ## Execution Workflow
 
 ```
@@ -174,22 +216,70 @@ Use these tools via `use_mcp_tool` with server name `overture`:
 3. Call submit_plan (or stream_plan_chunk for incremental delivery)
 4. Call get_approval
    - If status is "pending", wait and call again
-   - If status is "approved", you receive:
-     - fieldValues, selectedBranches, nodeConfigs (all user inputs)
-     - firstNode: The first node to execute with its inputs ready to use
+   - If status is "approved", you receive firstNode with all its config
    - If status is "cancelled", stop
-5. Execute the firstNode from get_approval response:
+5. FOR EACH NODE (starting with firstNode), execute in this EXACT order:
    a. Call update_node_status(node_id, "active")
-   b. Execute the work using firstNode.fieldValues, firstNode.attachments, firstNode.metaInstructions
-   c. Call update_node_status(node_id, "completed", output)
-   d. Check response: if isPaused is true, call check_pause({ wait: true }) to wait
-   e. The response includes nextNode with the next node's inputs, or isLastNode: true
-6. For each nextNode:
-   a. Execute the node as above
-   b. Check isPaused in response; if true, wait with check_pause({ wait: true })
-   c. Continue until isLastNode is true
+
+   b. **FIRST: CHECK FOR MCP SERVER** ← THIS IS MANDATORY
+      - If node.mcpServer exists:
+        1. Check if MCP server is already installed/configured
+        2. If NOT installed: STOP and install it following mcpServer.readmeContent
+        3. Verify installation by calling one of the MCP server's tools
+        4. Only then proceed to use it for the node's task
+
+   c. Execute the node's task using:
+      - node.fieldValues (use ALL of them)
+      - node.attachments (read and use ALL files)
+      - node.metaInstructions (follow EXACTLY)
+      - node.mcpServer tools (if present, use as specified in formattedInstructions)
+
+   d. Call update_node_status(node_id, "completed", output)
+   e. Check response: if isPaused is true, call check_pause({ wait: true })
+   f. Get nextNode from response, or isLastNode: true
+
+6. Repeat step 5 for each nextNode until isLastNode is true
 7. Call plan_completed
 ```
+
+### ⚠️ MCP SERVER CHECK IS STEP 5b - DO NOT SKIP
+
+When you receive ANY node (firstNode or nextNode), your **FIRST ACTION** after marking it active must be:
+
+```
+IF node.mcpServer EXISTS:
+  → STOP everything else
+  → Try to use one of the MCP server's tools to check if it's installed
+  → If you get "No connection found" or similar error:
+      ╔══════════════════════════════════════════════════════════════╗
+      ║  DO NOT SKIP TO THE NEXT NODE                                ║
+      ║  DO NOT IGNORE THIS ERROR                                    ║
+      ║  YOU MUST INSTALL THE MCP SERVER NOW                         ║
+      ╚══════════════════════════════════════════════════════════════╝
+      1. Read mcpServer.readmeContent for installation instructions
+      2. Install the MCP server (uvx, pip, docker, etc.)
+      3. Configure it in the MCP settings file
+      4. Retry the tool call to verify installation
+  → Once working, use the MCP server for the node's task
+```
+
+### 🚨 CRITICAL: "No connection found" Error Handling
+
+If you attempt to use an MCP tool and receive an error like:
+```
+Error executing MCP tool: No connection found for server: [server-name]
+```
+
+**THIS IS NOT A REASON TO SKIP THE NODE OR PROCEED WITHOUT THE MCP SERVER.**
+
+You MUST:
+1. **STOP** - Do not continue with the node's task
+2. **INSTALL** - Follow the installation instructions in `mcpServer.readmeContent`
+3. **CONFIGURE** - Add the server to the MCP settings file
+4. **VERIFY** - Call the tool again to confirm it works
+5. **THEN CONTINUE** - Only after successful verification, proceed with the node's task
+
+**The user attached this MCP server because they NEED it for this node. Skipping it defeats the entire purpose.**
 
 ## Response Payloads
 
@@ -197,9 +287,6 @@ Use these tools via `use_mcp_tool` with server name `overture`:
 ```json
 {
   "status": "approved",
-  "fieldValues": { "n1.api_key": "sk-..." },
-  "selectedBranches": { "n2": "b1" },
-  "nodeConfigs": { ... },
   "firstNode": {
     "id": "n1",
     "title": "Initialize Project",
@@ -207,10 +294,14 @@ Use these tools via `use_mcp_tool` with server name `overture`:
     "description": "Set up the project structure",
     "fieldValues": { "api_key": "sk-..." },
     "attachments": [{ "path": "/path/to/file", "name": "spec.md", "type": "document" }],
-    "metaInstructions": "Use TypeScript strict mode"
-  }
+    "metaInstructions": "Use TypeScript strict mode",
+    "mcpServer": { ... }
+  },
+  "message": "Plan approved by user. Execute firstNode, then call update_node_status to get the next node."
 }
 ```
+
+**Note:** Each node's configuration (fieldValues, attachments, metaInstructions, mcpServer) is included directly in the node object. You receive nodes one at a time — `firstNode` from `get_approval`, then `nextNode` from each `update_node_status` call.
 
 ### update_node_status (when completed)
 ```json
@@ -332,6 +423,7 @@ Users can attach **MCP servers** to individual nodes to extend your capabilities
       "description": "Generate images using Replicate AI models",
       "githubUrl": "https://github.com/replicate/replicate-mcp",
       "requiresApiKey": true,
+      "readmeContent": "# replicate-mcp\n\n## Installation\n...",
       "formattedInstructions": "=== MCP SERVER INTEGRATION ===\n..."
     }
   }
@@ -344,18 +436,58 @@ When `mcpServer` is present on a node:
 
 1. **YOU MUST** use the MCP server exactly as described by the user in `formattedInstructions`
 2. **YOU MUST** follow the user's intended usage precisely — they specified why they attached this MCP
-3. **IF THE MCP SERVER IS NOT AVAILABLE OR NOT CONFIGURED:**
-   - **YOU MUST** follow the setup instructions provided in `formattedInstructions`
-   - These instructions come from the MCP server's README
-   - Guide the user through setup if needed before proceeding
+3. **IF THE MCP SERVER IS NOT AVAILABLE OR NOT CONFIGURED**, follow the Setup Instructions below
+
+### Setup Instructions (When MCP Server Not Available)
+
+The `mcpServer.formattedInstructions` field now includes **provider-specific setup instructions** tailored for Cline. Follow them exactly.
+
+**Cline MCP Configuration File Locations:**
+- **macOS:** `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- **Windows:** `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+- **Linux:** `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+
+**Setup Steps:**
+1. **Read the existing MCP settings file** — DO NOT overwrite other servers
+2. **Add the new server** to the `"mcpServers"` object
+3. **Save the file**
+4. **Verify** by calling one of the MCP server's tools
+
+**Example Configuration:**
+```json
+{
+  "mcpServers": {
+    "server-name": {
+      "command": "uvx",
+      "args": ["mcp-server-name"],
+      "disabled": false
+    }
+  }
+}
+```
+
+### Setup Workflow
+
+```
+1. Try to use the MCP server
+2. If you get "No connection found" error:
+   a. Read mcpServer.formattedInstructions for provider-specific setup
+   b. Read mcpServer.readmeContent for installation commands
+   c. Read existing MCP settings file (DO NOT OVERWRITE existing servers)
+   d. Add the new server configuration
+   e. Install dependencies (uvx, pip, etc.)
+   f. Retry the MCP tool call to verify installation
+3. Once working, use the MCP server for the node's task
+```
 
 ### Why This Matters
 
-Users attach MCP servers because they want specific capabilities for specific nodes. Ignoring this is equivalent to ignoring their explicit instructions. The `formattedInstructions` field contains everything you need:
-- Server details (name, author, GitHub URL)
-- User's intended usage description
-- Critical compliance instructions
-- Setup instructions if the MCP isn't available
+Users attach MCP servers because they want specific capabilities for specific nodes. Ignoring this is equivalent to ignoring their explicit instructions. The `mcpServer` object contains everything you need:
+- `name`, `author`, `description` — Server identification
+- `githubUrl` — Source repository for documentation
+- `readmeContent` — Installation and usage instructions
+- `requiresApiKey` — Whether API key configuration is needed
+- `formattedInstructions` — User's intended usage and critical compliance instructions
 
 **Always check for `mcpServer` on every node and honor its instructions.**
 
