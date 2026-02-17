@@ -120,6 +120,7 @@ export async function handleGetApproval(): Promise<{
   status: 'approved' | 'cancelled' | 'pending';
   fieldValues: Record<string, string>;
   selectedBranches: Record<string, string>;
+  nodeConfigs: Record<string, { fieldValues: Record<string, string>; attachments: { path: string; name: string; type: string }[]; metaInstructions?: string }>;
   message: string;
 }> {
   // Wait up to 60 seconds before returning 'pending'
@@ -131,6 +132,7 @@ export async function handleGetApproval(): Promise<{
       status: 'approved',
       fieldValues: planStore.getFieldValues(),
       selectedBranches: planStore.getSelectedBranches(),
+      nodeConfigs: planStore.getNodeConfigs(),
       message: 'Plan approved by user',
     };
   }
@@ -140,6 +142,7 @@ export async function handleGetApproval(): Promise<{
       status: 'cancelled',
       fieldValues: {},
       selectedBranches: {},
+      nodeConfigs: {},
       message: 'Plan cancelled by user',
     };
   }
@@ -149,6 +152,7 @@ export async function handleGetApproval(): Promise<{
     status: 'pending',
     fieldValues: {},
     selectedBranches: {},
+    nodeConfigs: {},
     message: 'Waiting for user approval. Call get_approval again to continue waiting.',
   };
 }

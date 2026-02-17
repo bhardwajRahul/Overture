@@ -7,7 +7,20 @@ class WebSocketManager {
   private clients: Set<WebSocket> = new Set();
 
   start(port: number): void {
-    this.wss = new WebSocketServer({ port });
+    try {
+      this.wss = new WebSocketServer({ port });
+    } catch (err) {
+      console.error(`[Overture] WebSocket server failed to start on port ${port}:`, err);
+      return;
+    }
+
+    this.wss.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[Overture] WebSocket port ${port} already in use - another instance may be running`);
+      } else {
+        console.error(`[Overture] WebSocket server error:`, err);
+      }
+    });
 
     console.error(`[Overture] WebSocket server listening on ws://localhost:${port}`);
 
@@ -64,7 +77,7 @@ class WebSocketManager {
     switch (message.type) {
       case 'approve_plan':
         console.error('[Overture] Plan approved by user');
-        planStore.setApproval(message.fieldValues, message.selectedBranches);
+        planStore.setApproval(message.fieldValues, message.selectedBranches, message.nodeConfigs || {});
         break;
 
       case 'cancel_plan':

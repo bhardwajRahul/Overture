@@ -23,6 +23,13 @@ export interface Branch {
   cons?: string;
 }
 
+export interface FileAttachment {
+  id: string;
+  path: string;
+  name: string;
+  type: 'image' | 'code' | 'document' | 'other';
+}
+
 export interface PlanNode {
   id: string;
   type: NodeType;
@@ -38,6 +45,8 @@ export interface PlanNode {
   branchParent?: string;
   branchId?: string;
   output?: string;
+  attachments?: FileAttachment[];
+  metaInstructions?: string;
 }
 
 export interface PlanEdge {
@@ -55,12 +64,19 @@ export interface Plan {
   status: 'streaming' | 'ready' | 'approved' | 'executing' | 'completed' | 'failed';
 }
 
+export interface NodeConfig {
+  fieldValues: Record<string, string>;
+  attachments: FileAttachment[];
+  metaInstructions?: string;
+}
+
 export interface PlanState {
   plan: Plan | null;
   nodes: PlanNode[];
   edges: PlanEdge[];
   fieldValues: Record<string, string>;
   selectedBranches: Record<string, string>;
+  nodeConfigs: Record<string, NodeConfig>; // nodeId -> config
 }
 
 // WebSocket message types
@@ -80,5 +96,6 @@ export type WSClientMessage =
       type: 'approve_plan';
       fieldValues: Record<string, string>;
       selectedBranches: Record<string, string>;
+      nodeConfigs: Record<string, NodeConfig>;
     }
   | { type: 'cancel_plan' };

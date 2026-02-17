@@ -54,6 +54,15 @@ export function startHttpServer(port: number): void {
 
   const server = createServer(app);
 
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[Overture] Port ${port} already in use - another instance may be running`);
+      // Don't crash - the existing instance will serve the UI
+    } else {
+      console.error(`[Overture] HTTP server error:`, err);
+    }
+  });
+
   server.listen(port, () => {
     console.error(`[Overture] UI server listening on http://localhost:${port}`);
   });

@@ -1,4 +1,4 @@
-import { Plan, PlanNode, PlanEdge, PlanState, NodeStatus } from '../types.js';
+import { Plan, PlanNode, PlanEdge, PlanState, NodeStatus, NodeConfig } from '../types.js';
 
 class PlanStore {
   private state: PlanState = {
@@ -7,6 +7,7 @@ class PlanStore {
     edges: [],
     fieldValues: {},
     selectedBranches: {},
+    nodeConfigs: {},
   };
 
   private approvalResolver: ((value: boolean) => void) | null = null;
@@ -37,6 +38,10 @@ class PlanStore {
     return this.state.selectedBranches;
   }
 
+  getNodeConfigs(): Record<string, NodeConfig> {
+    return this.state.nodeConfigs;
+  }
+
   // Mutations
   startPlan(plan: Plan): void {
     this.state = {
@@ -45,6 +50,7 @@ class PlanStore {
       edges: [],
       fieldValues: {},
       selectedBranches: {},
+      nodeConfigs: {},
     };
 
     // Create a new approval promise
@@ -79,10 +85,12 @@ class PlanStore {
 
   setApproval(
     fieldValues: Record<string, string>,
-    selectedBranches: Record<string, string>
+    selectedBranches: Record<string, string>,
+    nodeConfigs: Record<string, NodeConfig> = {}
   ): void {
     this.state.fieldValues = fieldValues;
     this.state.selectedBranches = selectedBranches;
+    this.state.nodeConfigs = nodeConfigs;
     this.updatePlanStatus('approved');
 
     // Resolve the approval promise
@@ -124,6 +132,7 @@ class PlanStore {
       edges: [],
       fieldValues: {},
       selectedBranches: {},
+      nodeConfigs: {},
     };
     this.approvalResolver = null;
     this.approvalPromise = null;
