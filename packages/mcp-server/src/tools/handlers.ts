@@ -16,7 +16,41 @@ export interface NextNodeInfo {
   fieldValues: Record<string, string>;
   attachments: { path: string; name: string; type: string }[];
   metaInstructions?: string;
-  mcpServer?: McpServer;
+  mcpServer?: McpServer & { formattedInstructions?: string };
+}
+
+/**
+ * Format MCP server info with mandatory usage instructions
+ */
+function formatMcpServerWithInstructions(mcpServer: McpServer | undefined): (McpServer & { formattedInstructions?: string }) | undefined {
+  if (!mcpServer) return undefined;
+
+  const usageDesc = (mcpServer as McpServer & { usageDescription?: string }).usageDescription || '';
+
+  const formattedInstructions = `
+=== MCP SERVER INTEGRATION ===
+Server: ${mcpServer.name} by ${mcpServer.author}
+Description: ${mcpServer.description}
+GitHub: ${mcpServer.githubUrl}
+
+${usageDesc ? `=== USER'S INTENDED USAGE ===\n${usageDesc}\n` : ''}
+=== CRITICAL INSTRUCTIONS ===
+**YOU MUST** use this MCP server exactly as described by the user above.
+${usageDesc ? `The user has specified their intent - follow it precisely.` : ''}
+
+**IF THE MCP SERVER IS NOT AVAILABLE OR NOT CONFIGURED:**
+You **MUST** follow the setup instructions provided in the MCP server's README.
+${mcpServer.requiresApiKey ? `\n**NOTE:** This MCP server requires an API key. Ensure the API key is configured before use.` : ''}
+
+Setup Instructions:
+${mcpServer.readmeContent ? mcpServer.readmeContent.substring(0, 2000) : 'Refer to the GitHub repository for setup instructions: ' + mcpServer.githubUrl}
+${'='.repeat(30)}
+`.trim();
+
+  return {
+    ...mcpServer,
+    formattedInstructions,
+  };
 }
 
 /**
@@ -173,7 +207,7 @@ export async function handleGetApproval(): Promise<{
         fieldValues: config.fieldValues || {},
         attachments: config.attachments || [],
         metaInstructions: config.metaInstructions,
-        mcpServer: config.mcpServer,
+        mcpServer: formatMcpServerWithInstructions(config.mcpServer),
       };
     }
 
@@ -346,7 +380,7 @@ function findNextNode(
       fieldValues: config.fieldValues || {},
       attachments: config.attachments || [],
       metaInstructions: config.metaInstructions,
-      mcpServer: config.mcpServer,
+      mcpServer: formatMcpServerWithInstructions(config.mcpServer),
     };
   }
 
@@ -432,7 +466,7 @@ export async function handleCheckRerun(timeoutMs: number = 5000): Promise<{
       fieldValues: config.fieldValues || {},
       attachments: config.attachments || [],
       metaInstructions: config.metaInstructions,
-      mcpServer: config.mcpServer,
+      mcpServer: formatMcpServerWithInstructions(config.mcpServer),
     };
   }
 

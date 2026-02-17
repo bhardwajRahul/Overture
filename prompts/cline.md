@@ -313,6 +313,54 @@ All of this context is returned to you when they approve, so you can execute exa
 
 ---
 
+## MCP Server Integration (CRITICAL)
+
+Users can attach **MCP servers** to individual nodes to extend your capabilities. When a node has an MCP server attached, the `nextNode` response will include an `mcpServer` object with a `formattedInstructions` field.
+
+### Example Response with MCP Server
+```json
+{
+  "success": true,
+  "nextNode": {
+    "id": "n5",
+    "title": "Generate product images",
+    "fieldValues": { ... },
+    "attachments": [],
+    "mcpServer": {
+      "name": "replicate-mcp",
+      "author": "replicate",
+      "description": "Generate images using Replicate AI models",
+      "githubUrl": "https://github.com/replicate/replicate-mcp",
+      "requiresApiKey": true,
+      "formattedInstructions": "=== MCP SERVER INTEGRATION ===\n..."
+    }
+  }
+}
+```
+
+### MANDATORY Requirements
+
+When `mcpServer` is present on a node:
+
+1. **YOU MUST** use the MCP server exactly as described by the user in `formattedInstructions`
+2. **YOU MUST** follow the user's intended usage precisely — they specified why they attached this MCP
+3. **IF THE MCP SERVER IS NOT AVAILABLE OR NOT CONFIGURED:**
+   - **YOU MUST** follow the setup instructions provided in `formattedInstructions`
+   - These instructions come from the MCP server's README
+   - Guide the user through setup if needed before proceeding
+
+### Why This Matters
+
+Users attach MCP servers because they want specific capabilities for specific nodes. Ignoring this is equivalent to ignoring their explicit instructions. The `formattedInstructions` field contains everything you need:
+- Server details (name, author, GitHub URL)
+- User's intended usage description
+- Critical compliance instructions
+- Setup instructions if the MCP isn't available
+
+**Always check for `mcpServer` on every node and honor its instructions.**
+
+---
+
 ## Best Practices
 
 1. **Over-plan, don't under-plan**: More nodes = more transparency = happier user
@@ -323,6 +371,7 @@ All of this context is returned to you when they approve, so you can execute exa
 6. **Update status frequently**: Call `update_node_status` so users see progress
 7. **Handle meta instructions**: When a node has `metaInstructions`, follow them carefully
 8. **Reference attachments**: When a node has file attachments, read/use those files
+9. **Honor MCP servers**: When a node has `mcpServer`, follow its `formattedInstructions` precisely
 
 ---
 
