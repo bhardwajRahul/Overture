@@ -172,17 +172,64 @@ Use these tools via `use_mcp_tool` with server name `overture`:
 3. Call submit_plan (or stream_plan_chunk for incremental delivery)
 4. Call get_approval
    - If status is "pending", wait and call again
-   - If status is "approved", proceed with fieldValues, selectedBranches, and nodeConfigs
+   - If status is "approved", you receive:
+     - fieldValues, selectedBranches, nodeConfigs (all user inputs)
+     - firstNode: The first node to execute with its inputs ready to use
    - If status is "cancelled", stop
-5. For each node in execution order:
-   a. Check if node should be skipped (based on selectedBranches)
-   b. Call update_node_status(node_id, "active")
-   c. Execute the work, using:
-      - fieldValues for dynamic field inputs
-      - nodeConfigs[node_id].attachments for file references
-      - nodeConfigs[node_id].metaInstructions for user guidance
-   d. Call update_node_status(node_id, "completed", output)
-6. Call plan_completed
+5. Execute the firstNode from get_approval response:
+   a. Call update_node_status(node_id, "active")
+   b. Execute the work using firstNode.fieldValues, firstNode.attachments, firstNode.metaInstructions
+   c. Call update_node_status(node_id, "completed", output)
+   d. The response includes nextNode with the next node's inputs, or isLastNode: true
+6. Continue with each nextNode until isLastNode is true
+7. Call plan_completed
+```
+
+## Response Payloads
+
+### get_approval (when approved)
+```json
+{
+  "status": "approved",
+  "fieldValues": { "n1.api_key": "sk-..." },
+  "selectedBranches": { "n2": "b1" },
+  "nodeConfigs": { ... },
+  "firstNode": {
+    "id": "n1",
+    "title": "Initialize Project",
+    "type": "task",
+    "description": "Set up the project structure",
+    "fieldValues": { "api_key": "sk-..." },
+    "attachments": [{ "path": "/path/to/file", "name": "spec.md", "type": "document" }],
+    "metaInstructions": "Use TypeScript strict mode"
+  }
+}
+```
+
+### update_node_status (when completed)
+```json
+{
+  "success": true,
+  "message": "Node n1 status updated to completed",
+  "nextNode": {
+    "id": "n2",
+    "title": "Configure Database",
+    "type": "task",
+    "description": "Set up database connection",
+    "fieldValues": { "database_url": "postgres://..." },
+    "attachments": [],
+    "metaInstructions": "Use connection pooling"
+  }
+}
+```
+
+When it's the last node:
+```json
+{
+  "success": true,
+  "message": "Node n5 status updated to completed. This was the last node.",
+  "isLastNode": true
+}
 ```
 
 ---

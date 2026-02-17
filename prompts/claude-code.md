@@ -272,21 +272,65 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
 4. Call submit_plan (or stream_plan_chunk for incremental display)
 5. Call get_approval and handle response:
    - status: "pending" → call get_approval again (user is still reviewing)
-   - status: "approved" → proceed with execution
+   - status: "approved" → you receive:
+     - fieldValues, selectedBranches, nodeConfigs (all user inputs)
+     - firstNode: The first node to execute with its inputs ready to use
    - status: "cancelled" → stop and inform user
-6. Extract from approval response:
-   - fieldValues: Map of field names to user-provided values
-   - selectedBranches: Map of decision node IDs to chosen branch IDs
-   - nodeConfigs: Per-node data including:
-     - attachments: Array of file paths user attached
-     - metaInstructions: User's specific guidance for this node
-7. Execute each node in order:
-   a. Skip nodes whose branch wasn't selected
-   b. Call update_node_status(node_id, "active")
-   c. Execute using fieldValues, attachments, and metaInstructions
-   d. Call update_node_status(node_id, "completed", summary)
+6. Execute the firstNode from get_approval response:
+   a. Call update_node_status(node_id, "active")
+   b. Execute using firstNode.fieldValues, firstNode.attachments, firstNode.metaInstructions
+   c. Call update_node_status(node_id, "completed", summary)
+   d. Response includes nextNode with the next node's inputs, or isLastNode: true
    e. If error: update_node_status(node_id, "failed", error) and plan_failed(error)
+7. Continue with each nextNode until isLastNode is true
 8. Call plan_completed when all nodes succeed
+```
+
+## Response Payloads
+
+### get_approval (when approved)
+```json
+{
+  "status": "approved",
+  "fieldValues": { "n1.api_key": "sk-..." },
+  "selectedBranches": { "n2": "b1" },
+  "nodeConfigs": { ... },
+  "firstNode": {
+    "id": "n1",
+    "title": "Initialize Project",
+    "type": "task",
+    "description": "Set up the project structure",
+    "fieldValues": { "api_key": "sk-..." },
+    "attachments": [{ "path": "/path/to/file", "name": "spec.md", "type": "document" }],
+    "metaInstructions": "Use TypeScript strict mode"
+  }
+}
+```
+
+### update_node_status (when completed)
+```json
+{
+  "success": true,
+  "message": "Node n1 status updated to completed",
+  "nextNode": {
+    "id": "n2",
+    "title": "Configure Database",
+    "type": "task",
+    "description": "Set up database connection",
+    "fieldValues": { "database_url": "postgres://..." },
+    "attachments": [],
+    "metaInstructions": "Use connection pooling"
+  }
+}
+```
+
+When it's the last node:
+```json
+{
+  "success": true,
+  "message": "Node n5 status updated to completed. This was the last node.",
+  "isLastNode": true
+}
 ```
 
 ---
