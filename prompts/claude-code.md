@@ -574,7 +574,7 @@ claude mcp add server-name --scope user
 - **User scope:** `~/.claude.json`
 - **Project scope:** `.mcp.json` (in project root)
 
-**Setup Steps:**
+**Setup Steps:** 
 1. **Use CLI** or open the config file
 2. **Read existing config** if it exists — DO NOT overwrite other servers
 3. **Add the new server** configuration
