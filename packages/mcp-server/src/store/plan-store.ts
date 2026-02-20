@@ -274,19 +274,30 @@ class MultiProjectPlanStore {
 
   // === Approval ===
 
-  setApproval(
+  async setApproval(
     projectId: string,
     fieldValues: Record<string, string>,
     selectedBranches: Record<string, string>,
     nodeConfigs: Record<string, NodeConfig> = {}
-  ): void {
+  ): Promise<void> {
     console.error(`[Overture] setApproval called for project: ${projectId}`);
     console.error(`[Overture] Available projects:`, Array.from(this.projects.keys()));
     console.error(`[Overture] Available resolvers:`, Array.from(this.approvalResolvers.keys()));
 
-    const state = this.projects.get(projectId);
+    let state = this.projects.get(projectId);
+
+    // If no state found, try to restore from history
     if (!state) {
-      console.error(`[Overture] ERROR: No state found for project ${projectId}`);
+      console.error(`[Overture] No state found for project ${projectId}, attempting to restore from history...`);
+      const restored = await this.restoreProjectFromHistory(projectId);
+      if (restored) {
+        state = this.projects.get(projectId);
+        console.error(`[Overture] Successfully restored project from history`);
+      }
+    }
+
+    if (!state) {
+      console.error(`[Overture] ERROR: No state found for project ${projectId} and could not restore from history`);
       return;
     }
 
@@ -694,6 +705,59 @@ class MultiProjectPlanStore {
 
     this.projects.set(state.projectId, state);
     return state;
+  }
+
+  /**
+   * Restore a project from history by projectId
+   * Finds the most recent plan for this project and loads it
+   */
+  async restoreProjectFromHistory(projectId: string): Promise<boolean> {
+    try {
+      const entries = await historyStorage.getEntriesByProject(projectId);
+      if (entries.length === 0) {
+        console.error(`[Overture] No history entries found for project ${projectId}`);
+        return false;
+      }
+
+      // Get the most recent entry (entries are sorted by updatedAt desc)
+      const mostRecent = entries[0];
+      console.error(`[Overture] Found history entry: ${mostRecent.title} (${mostRecent.id})`);
+
+      const persisted = await historyStorage.getPlan(mostRecent.id);
+      if (!persisted) {
+        console.error(`[Overture] Could not load plan data for ${mostRecent.id}`);
+        return false;
+      }
+
+      // Restore the state
+      const state: ProjectPlanState = {
+        projectId: persisted.plan.projectId,
+        workspacePath: persisted.plan.workspacePath,
+        plan: persisted.plan,
+        nodes: persisted.nodes,
+        edges: persisted.edges,
+        fieldValues: persisted.fieldValues,
+        selectedBranches: persisted.selectedBranches,
+        nodeConfigs: persisted.nodeConfigs
+      };
+
+      this.projects.set(state.projectId, state);
+
+      // Create approval promise so get_approval can work
+      console.error(`[Overture] Creating approval promise for restored project: ${projectId}`);
+      this.approvalPromises.set(projectId, new Promise((resolve) => {
+        this.approvalResolvers.set(projectId, resolve);
+      }));
+
+      // Reset pause state
+      this.pauseStates.set(projectId, false);
+
+      console.error(`[Overture] Project ${projectId} restored from history with ${state.nodes.length} nodes`);
+      return true;
+    } catch (error) {
+      console.error(`[Overture] Failed to restore project from history:`, error);
+      return false;
+    }
   }
 
   // === Resume Info ===

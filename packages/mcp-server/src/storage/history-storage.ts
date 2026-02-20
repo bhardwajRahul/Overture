@@ -36,26 +36,49 @@ class HistoryStorage {
     try {
       await this.ensureDirectory();
       const data = await fs.readFile(HISTORY_FILE, 'utf-8');
-      this.cache = JSON.parse(data);
+      const parsed = JSON.parse(data);
 
       // Validate structure
-      if (!this.cache || typeof this.cache.version !== 'number') {
-        throw new Error('Invalid history file format');
+      if (!parsed || typeof parsed.version !== 'number') {
+        console.error('[Overture] Invalid history file format, but preserving file');
+        // Don't overwrite - create empty cache but don't save
+        this.cache = {
+          version: 1,
+          lastUpdated: new Date().toISOString(),
+          entries: [],
+          plans: {}
+        };
+        return this.cache;
       }
 
+      this.cache = parsed;
+      console.error(`[Overture] Loaded history: ${this.cache.entries.length} entries`);
       return this.cache;
-    } catch (error) {
-      // File doesn't exist or is invalid - create empty structure
+    } catch (error: any) {
+      // Only create new file if it truly doesn't exist
+      if (error.code === 'ENOENT') {
+        console.error('[Overture] History file does not exist, creating new one');
+        this.cache = {
+          version: 1,
+          lastUpdated: new Date().toISOString(),
+          entries: [],
+          plans: {}
+        };
+        await this.ensureDirectory();
+        await fs.writeFile(HISTORY_FILE, JSON.stringify(this.cache, null, 2));
+        console.error('[Overture] Created new history file at', HISTORY_FILE);
+        return this.cache;
+      }
+
+      // For other errors (parse error, permission error, etc.), log but don't overwrite
+      console.error('[Overture] Error loading history file:', error.message);
+      console.error('[Overture] NOT overwriting existing file - using empty cache');
       this.cache = {
         version: 1,
         lastUpdated: new Date().toISOString(),
         entries: [],
         plans: {}
       };
-      // Write the initial empty file immediately so it exists
-      await this.ensureDirectory();
-      await fs.writeFile(HISTORY_FILE, JSON.stringify(this.cache, null, 2));
-      console.error('[Overture] Created new history file at', HISTORY_FILE);
       return this.cache;
     }
   }
@@ -64,8 +87,13 @@ class HistoryStorage {
    * Initialize history storage (call this on server start)
    */
   async initialize(): Promise<void> {
-    await this.load();
-    console.error('[Overture] History storage initialized, file:', HISTORY_FILE);
+    const history = await this.load();
+    console.error('[Overture] History storage initialized');
+    console.error('[Overture] History file:', HISTORY_FILE);
+    console.error('[Overture] Entries loaded:', history.entries.length);
+    if (history.entries.length > 0) {
+      console.error('[Overture] Most recent plan:', history.entries[0].title);
+    }
   }
 
   /**

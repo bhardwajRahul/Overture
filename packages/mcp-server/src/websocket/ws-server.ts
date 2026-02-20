@@ -294,7 +294,7 @@ class WebSocketManager {
         console.error(`[Overture] Field values:`, Object.keys(message.fieldValues || {}).length);
         console.error(`[Overture] Node configs:`, Object.keys(message.nodeConfigs || {}).length);
 
-        multiProjectPlanStore.setApproval(
+        await multiProjectPlanStore.setApproval(
           effectiveProjectId,
           message.fieldValues,
           message.selectedBranches,
