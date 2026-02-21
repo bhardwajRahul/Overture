@@ -3,7 +3,7 @@
 **Agent Plan Visualizer** — An Open-Source MCP Server by [Sixth](https://trysixth.com)
 
 <p align="center">
-  <img src="https://firebasestorage.googleapis.com/v0/b/sixth-v2.appspot.com/o/Screenshot%202026-02-21%20at%207.37.40%E2%80%AFAM.png?alt=media&token=13b29c30-dd91-4f26-bd35-0b87b5d23b6d" alt="Overture Plan Canvas" width="100%" />
+  <img src="https://firebasestorage.googleapis.com/v0/b/sixth-v2.appspot.com/o/copy_B7CEA825-7330-438E-943A-ECA598B56D39.GIF?alt=media&token=88b10910-3896-41de-8b87-fb632050611b" alt="Overture Plan Canvas" width="100%" />
 </p>
 
 > See what your AI coding agent plans to do **before** it writes a single line of code.
