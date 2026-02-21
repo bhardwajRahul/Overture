@@ -283,6 +283,14 @@ class MultiProjectPlanStore {
     console.error(`[Overture] setApproval called for project: ${projectId}`);
     console.error(`[Overture] Available projects:`, Array.from(this.projects.keys()));
     console.error(`[Overture] Available resolvers:`, Array.from(this.approvalResolvers.keys()));
+    console.error(`[Overture] 📦 nodeConfigs received:`, JSON.stringify(nodeConfigs, null, 2));
+    // Log each node's config details
+    for (const [nodeId, config] of Object.entries(nodeConfigs)) {
+      console.error(`[Overture]   Node ${nodeId}:`);
+      console.error(`[Overture]     - attachments: ${config.attachments?.length ?? 0}`);
+      console.error(`[Overture]     - mcpServers: ${config.mcpServers?.length ?? 0}`);
+      console.error(`[Overture]     - metaInstructions: ${config.metaInstructions ? 'yes' : 'no'}`);
+    }
 
     let state = this.projects.get(projectId);
 
