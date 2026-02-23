@@ -175,6 +175,52 @@ claude mcp get ${configServerName}
 \`\`\`
 `;
 
+    case 'gh_copilot':
+    case 'gh-copilot':
+    case 'github-copilot':
+    case 'copilot':
+      return `
+### GitHub Copilot MCP Setup Instructions
+
+**Workspace-level Configuration (Recommended)**
+
+Create or edit \`.vscode/mcp.json\` in your project root:
+
+\`\`\`json
+{
+  "servers": {
+    "${configServerName}": {
+      "command": "npx",
+      "args": ["mcp-server-name"]
+    }
+  }
+}
+\`\`\`
+
+**User-level Configuration**
+
+Add to your VS Code \`settings.json\`:
+
+\`\`\`json
+{
+  "github.copilot.chat.mcpServers": {
+    "${configServerName}": {
+      "command": "npx",
+      "args": ["mcp-server-name"]
+    }
+  }
+}
+\`\`\`
+
+**Steps:**
+1. Create/edit the config file at one of the locations above
+2. Add the server configuration
+3. Save the file
+4. Reload VS Code window (Cmd/Ctrl + Shift + P → "Developer: Reload Window")
+
+**Important:** Read the existing file first - DO NOT overwrite other servers!
+`;
+
     default:
       return `
 ### MCP Setup Instructions
@@ -1160,7 +1206,7 @@ export async function handleGetUsageInstructions(agentType: string): Promise<{
   message: string;
   availableAgents: string[];
 }> {
-  const availableAgents = ['claude-code', 'cline', 'cursor', 'sixth'];
+  const availableAgents = ['claude-code', 'cline', 'cursor', 'sixth', 'gh_copilot'];
 
   // Normalize agent type
   const normalizedType = agentType.toLowerCase().trim();
@@ -1174,6 +1220,12 @@ export async function handleGetUsageInstructions(agentType: string): Promise<{
     'cursor': 'cursor',
     'sixth': 'sixth',
     '6th': 'sixth',
+    'gh_copilot': 'gh_copilot',
+    'gh-copilot': 'gh_copilot',
+    'github-copilot': 'gh_copilot',
+    'github_copilot': 'gh_copilot',
+    'copilot': 'gh_copilot',
+    'ghcopilot': 'gh_copilot',
   };
 
   const mappedType = agentMap[normalizedType];

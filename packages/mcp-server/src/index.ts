@@ -36,13 +36,13 @@ const AUTO_OPEN_BROWSER = process.env.OVERTURE_AUTO_OPEN !== 'false';
 const StreamPlanChunkSchema = z.object({
   xml_chunk: z.string().describe('A chunk of the plan XML to process'),
   workspace_path: z.string().optional().describe('Absolute path to the workspace/project directory'),
-  agent_type: z.string().optional().describe('The type of agent (claude-code, cline, cursor, sixth)'),
+  agent_type: z.string().optional().describe('The type of agent (claude-code, cline, cursor, sixth, gh_copilot)'),
 });
 
 const SubmitPlanSchema = z.object({
   plan_xml: z.string().describe('The complete plan XML'),
   workspace_path: z.string().optional().describe('Absolute path to the workspace/project directory'),
-  agent_type: z.string().optional().describe('The type of agent (claude-code, cline, cursor, sixth)'),
+  agent_type: z.string().optional().describe('The type of agent (claude-code, cline, cursor, sixth, gh_copilot)'),
 });
 
 const GetApprovalSchema = z.object({
@@ -133,7 +133,7 @@ const CreateNewPlanSchema = z.object({
 });
 
 const GetUsageInstructionsSchema = z.object({
-  agent_type: z.string().describe('The type of agent requesting instructions (claude-code, cline, cursor, sixth)'),
+  agent_type: z.string().describe('The type of agent requesting instructions (claude-code, cline, cursor, sixth, gh_copilot)'),
 });
 
 // Tool definitions
@@ -155,7 +155,7 @@ const TOOLS = [
         },
         agent_type: {
           type: 'string',
-          description: 'The type of agent (claude-code, cline, cursor, sixth)',
+          description: 'The type of agent (claude-code, cline, cursor, sixth, gh_copilot)',
         },
       },
       required: ['xml_chunk'],
@@ -178,7 +178,7 @@ const TOOLS = [
         },
         agent_type: {
           type: 'string',
-          description: 'The type of agent (claude-code, cline, cursor, sixth)',
+          description: 'The type of agent (claude-code, cline, cursor, sixth, gh_copilot)',
         },
       },
       required: ['plan_xml'],
@@ -425,7 +425,7 @@ const TOOLS = [
       properties: {
         agent_type: {
           type: 'string',
-          description: 'The type of agent requesting instructions. Supported: "claude-code", "cline", "cursor", "sixth"',
+          description: 'The type of agent requesting instructions. Supported: "claude-code", "cline", "cursor", "sixth", "gh_copilot"',
         },
       },
       required: ['agent_type'],
