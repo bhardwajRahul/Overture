@@ -25,7 +25,7 @@ You end up wasting tokens, time, and patience.
 
 Overture intercepts your AI agent's planning phase and renders it as an interactive visual flowchart — before any code is written.
 
-![Overture Screenshot](../../assets/screenshot.png)
+![Overture Screenshot](assets/screenshot.png)
 
 With Overture, you can:
 
