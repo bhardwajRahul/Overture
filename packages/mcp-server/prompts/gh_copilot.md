@@ -19,7 +19,7 @@ Every AI coding agent shares the same fundamental problem: the developer types a
 - Complex implementations with multiple valid approaches
 - Tasks where getting alignment upfront saves significant rework
 
-**DO NOT USE** Overture for:
+**DO NOT USE (Except if the user explicitity asks you to)** Overture for:
 - Simple questions or explanations
 - Single-file, small edits
 - Quick bug fixes with obvious solutions
@@ -33,6 +33,10 @@ Every AI coding agent shares the same fundamental problem: the developer types a
 
 Unlike simple 5-10 step outlines, Overture expects you to generate **fully decomposed plans** where every task is broken into its smallest meaningful units. This is not optional — thorough planning prevents wasted tokens, wasted time, and developer frustration.
 
+### The Golden Rule: ONE COMPONENT = ONE NODE
+
+**NEVER combine multiple components or features into a single node.** Each UI component, each API endpoint, each configuration step gets its own dedicated node.
+
 ### Planning Requirements
 
 For every task you receive, your plan must include:
@@ -43,7 +47,59 @@ For every task you receive, your plan must include:
 4. **Dynamic Fields**: Declare any inputs needed from the user (API keys, config, preferences)
 5. **Logical Dependencies**: Edges should reflect true execution order
 
-### Example: Proper Decomposition
+### Example: Good vs. Bad Planning
+
+**BAD PLAN (lazy, combined steps - DO NOT DO THIS):**
+```
+1. Set up project
+2. Build the frontend
+3. Add backend API
+4. Deploy
+```
+
+**GOOD PLAN (atomic decomposition - THIS IS WHAT WE WANT):**
+```
+1. Initialize Next.js project with TypeScript
+2. Configure Tailwind CSS with custom theme colors
+3. Create Header component
+   - Logo placement and styling
+   - Navigation menu items
+   - Mobile hamburger menu
+   - Dark mode toggle button
+4. Create Hero section
+   - Main headline with gradient text
+   - Subheadline copy
+   - Primary CTA button with hover states
+   - Background image/pattern
+5. Create Features section
+   - Section heading
+   - 3-column grid layout
+   - Individual FeatureCard component
+   - Icons for each feature
+6. Create Testimonials section
+   - Testimonial card component
+   - Avatar, name, role, quote
+   - Carousel/grid layout
+7. Create Pricing section
+   - Monthly/Annual toggle
+   - PricingCard component for each tier
+   - Feature comparison list
+8. Create Footer component
+   - Logo and tagline
+   - Link columns (Product, Company, Resources)
+   - Newsletter signup form
+   - Social media icons
+9. Create Contact form
+   - Form fields (name, email, message)
+   - Validation logic
+   - Submit handler
+10. Add SEO meta tags and Open Graph
+11. Configure Vercel deployment
+```
+
+**Notice:** Each component (Header, Hero, Features, Footer, etc.) is its **own separate node**. Do NOT combine "Header, Hero, and Footer" into one "Build UI components" node.
+
+### Example: Full-Stack App Decomposition
 
 If a user asks for "a full-stack e-commerce app with Stripe integration," your plan should include nodes like:
 
@@ -341,6 +397,67 @@ If the user asks for something completely unrelated to the current plan (e.g., "
     <edge id="e2" from="n2" to="n3" />
   </edges>
 </plan>
+```
+
+---
+
+## Branching Rules (CRITICAL FOR UI RENDERING)
+
+When you create decision nodes with branches, you **MUST** follow these rules for the UI to render correctly:
+
+### Rule 1: Every branch needs follow-up tasks
+For EACH branch option in a decision node, create at least one task node that is linked to that specific branch.
+
+### Rule 2: Use branch_parent and branch_id attributes
+Tasks that belong to a specific branch MUST have both attributes:
+```xml
+<node id="n3" type="task" branch_parent="n2" branch_id="b1">
+```
+- `branch_parent`: The ID of the decision node (e.g., "n2")
+- `branch_id`: The ID of the specific branch this task belongs to (e.g., "b1")
+
+### Rule 3: Create parallel branch paths
+If a decision has 3 branches (b1, b2, b3), you need tasks for each:
+```xml
+<!-- Decision node -->
+<node id="n2" type="decision">
+  <branch id="b1" label="Option A">...</branch>
+  <branch id="b2" label="Option B">...</branch>
+  <branch id="b3" label="Option C">...</branch>
+</node>
+
+<!-- Tasks for branch b1 (Option A) -->
+<node id="n3" type="task" branch_parent="n2" branch_id="b1">
+  <title>Implement Option A</title>
+</node>
+
+<!-- Tasks for branch b2 (Option B) -->
+<node id="n4" type="task" branch_parent="n2" branch_id="b2">
+  <title>Implement Option B</title>
+</node>
+
+<!-- Tasks for branch b3 (Option C) -->
+<node id="n5" type="task" branch_parent="n2" branch_id="b3">
+  <title>Implement Option C</title>
+</node>
+
+<!-- Edges connect decision to ALL branch tasks -->
+<edge from="n2" to="n3" />
+<edge from="n2" to="n4" />
+<edge from="n2" to="n5" />
+```
+
+### Rule 4: Branches can converge
+After branch-specific tasks, you can have a common task that all branches lead to:
+```xml
+<!-- Common task after all branches -->
+<node id="n6" type="task">
+  <title>Continue with shared step</title>
+</node>
+
+<edge from="n3" to="n6" />
+<edge from="n4" to="n6" />
+<edge from="n5" to="n6" />
 ```
 
 ---
