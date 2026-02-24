@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { StreamingXMLParser } from '../parser/xml-parser.js';
-import { planStore, multiProjectPlanStore } from '../store/plan-store.js';
+import { multiProjectPlanStore } from '../store/plan-store.js';
 import { wsManager } from '../websocket/ws-server.js';
 import { Plan, PlanNode, PlanEdge, NodeStatus, McpServer, ProjectContext, ResumePlanInfo } from '../types.js';
 
@@ -306,7 +306,7 @@ export function handleStreamPlanChunk(
   if (!currentParsers.has(projectId)) {
     const parser = new StreamingXMLParser((event) => {
       switch (event.type) {
-        case 'plan':
+        case 'plan': {
           const plan: Plan = {
             id: event.plan.id || `plan_${Date.now()}`,
             title: event.plan.title || 'Untitled Plan',
@@ -325,6 +325,7 @@ export function handleStreamPlanChunk(
           multiProjectPlanStore.startPlan(projectId, plan);
           wsManager.broadcastToProject(projectId, { type: 'plan_started', plan, projectId });
           break;
+        }
 
         case 'node':
           multiProjectPlanStore.addNode(projectId, event.node);
@@ -388,7 +389,7 @@ export function handleSubmitPlan(
 
   const parser = new StreamingXMLParser((event) => {
     switch (event.type) {
-      case 'plan':
+      case 'plan': {
         const plan: Plan = {
           id: event.plan.id || `plan_${Date.now()}`,
           title: event.plan.title || 'Untitled Plan',
@@ -418,6 +419,7 @@ export function handleSubmitPlan(
           workspacePath: projectContext.workspacePath
         });
         break;
+      }
 
       case 'node':
         console.error('[Overture] Broadcasting node_added:', event.node.id);

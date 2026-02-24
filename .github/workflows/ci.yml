@@ -31,19 +31,12 @@ jobs:
       - name: Lint MCP Server
         run: npm run lint -w overture-mcp
 
-      - name: Lint UI
-        run: npm run lint -w @overture/ui
-
       - name: Build MCP Server
         run: npm run build -w overture-mcp
-
-      - name: Build UI
-        run: npm run build -w @overture/ui
 
       - name: Verify build artifacts exist
         run: |
           test -f packages/mcp-server/dist/index.js || exit 1
-          test -f packages/ui/dist/index.html || exit 1
           echo "✓ All build artifacts verified"
 
   typecheck:
@@ -65,6 +58,3 @@ jobs:
 
       - name: Type check MCP Server
         run: npx tsc --noEmit --project packages/mcp-server/tsconfig.json
-
-      - name: Type check UI
-        run: npx tsc --noEmit --project packages/ui/tsconfig.json

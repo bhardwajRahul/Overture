@@ -1,8 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { WSMessage, WSClientMessage, ProjectContext, HistoryEntry, PlanDiff } from '../types.js';
-import { planStore, multiProjectPlanStore } from '../store/plan-store.js';
+import { WSMessage, WSClientMessage, ProjectContext, HistoryEntry } from '../types.js';
+import { multiProjectPlanStore } from '../store/plan-store.js';
 import { historyStorage } from '../storage/history-storage.js';
-import { calculatePlanDiff } from '../utils/plan-diff.js';
 
 /**
  * Tracks a connected client and their project subscription
