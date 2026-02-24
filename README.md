@@ -25,7 +25,7 @@ You end up wasting tokens, time, and patience.
 
 Overture intercepts your AI agent's planning phase and renders it as an interactive visual flowchart — before any code is written.
 
-![Overture Screenshot](assets/screenshot.png)
+![Overture Screenshot](../../assets/screenshot.png)
 
 With Overture, you can:
 
@@ -110,6 +110,25 @@ Add this to the `mcpServers` object:
 
 Restart VS Code for the changes to take effect.
 
+### GitHub Copilot
+
+Create a `.vscode/mcp.json` file in your project root:
+
+```json
+{
+  "servers": {
+    "overture": {
+      "command": "npx",
+      "args": ["overture-mcp"]
+    }
+  }
+}
+```
+
+After creating the file, reload VS Code (Cmd/Ctrl + Shift + P → "Developer: Reload Window").
+
+**Note:** GitHub Copilot MCP support requires VS Code 1.99+ and uses a different configuration format (`servers` instead of `mcpServers`).
+
 ### Global Installation (Optional)
 
 If you prefer to install Overture globally instead of using npx:
@@ -187,6 +206,24 @@ Add the `env` object to your MCP server configuration:
 ```json
 {
   "mcpServers": {
+    "overture": {
+      "command": "npx",
+      "args": ["overture-mcp"],
+      "env": {
+        "OVERTURE_HTTP_PORT": "4000",
+        "OVERTURE_WS_PORT": "4001",
+        "OVERTURE_AUTO_OPEN": "false"
+      }
+    }
+  }
+}
+```
+
+**GitHub Copilot** (`.vscode/mcp.json`)
+
+```json
+{
+  "servers": {
     "overture": {
       "command": "npx",
       "args": ["overture-mcp"],
