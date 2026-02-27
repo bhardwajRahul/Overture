@@ -38,7 +38,7 @@ For every task you receive, your plan must include:
 
 1. **Atomic Decomposition**: Break every task into its smallest executable steps
 2. **Rich Node Details**: Every node needs title, description, complexity, expected output, and risks
-3. **Decision Points**: Use `decision` nodes whenever multiple valid approaches exist
+3. **Branch Points**: When multiple valid approaches exist, create separate task nodes for each option and connect them from a common parent node
 4. **Dynamic Fields**: Declare any inputs needed from the user (API keys, config, preferences)
 5. **Logical Dependencies**: Edges should reflect true execution order
 
@@ -236,35 +236,16 @@ If the user asks for something completely unrelated to the current plan (e.g., "
       />
     </node>
 
-    <!-- Decision node when multiple approaches are valid -->
-    <node id="n2" type="decision" status="pending">
-      <title>Select Database</title>
-      <description>Choose the database technology for this project</description>
+    <!-- Branch point: n1 has multiple outgoing edges, creating a choice -->
+    <!-- Each branch option is a real task node with pros/cons -->
 
-      <branch id="b1" label="PostgreSQL">
-        <description>Full-featured relational database</description>
-        <pros>ACID compliance, complex queries, strong ecosystem</pros>
-        <cons>Requires server setup, more complex scaling</cons>
-      </branch>
-
-      <branch id="b2" label="SQLite">
-        <description>File-based embedded database</description>
-        <pros>Zero setup, portable, fast for read-heavy workloads</pros>
-        <cons>Not suitable for high concurrency or large datasets</cons>
-      </branch>
-
-      <branch id="b3" label="MongoDB">
-        <description>Document-oriented NoSQL database</description>
-        <pros>Flexible schema, horizontal scaling, JSON-native</pros>
-        <cons>No ACID transactions across documents, eventual consistency</cons>
-      </branch>
-    </node>
-
-    <!-- Task linked to a specific branch -->
-    <node id="n3" type="task" status="pending" branch_parent="n2" branch_id="b1">
-      <title>Configure PostgreSQL Connection</title>
-      <description>Set up database connection with Prisma ORM</description>
+    <!-- Branch Option A: PostgreSQL -->
+    <node id="n2_postgres" type="task" status="pending">
+      <title>Set up PostgreSQL Database</title>
+      <description>Configure PostgreSQL with Prisma ORM for full relational database support</description>
       <complexity>medium</complexity>
+      <pros>ACID compliance, complex queries, strong ecosystem</pros>
+      <cons>Requires server setup, more complex scaling</cons>
       <expected_output>Prisma schema and database client configured</expected_output>
 
       <dynamic_field
@@ -277,74 +258,101 @@ If the user asks for something completely unrelated to the current plan (e.g., "
         setup_instructions="Format: postgres://user:pass@host:5432/database"
       />
     </node>
+
+    <!-- Branch Option B: SQLite -->
+    <node id="n2_sqlite" type="task" status="pending">
+      <title>Set up SQLite Database</title>
+      <description>Configure SQLite with Prisma for simple file-based database</description>
+      <complexity>low</complexity>
+      <pros>Zero setup, portable, fast for read-heavy workloads</pros>
+      <cons>Not suitable for high concurrency or large datasets</cons>
+      <expected_output>SQLite database file and Prisma client configured</expected_output>
+    </node>
+
+    <!-- Task after branch convergence -->
+    <node id="n3" type="task" status="pending">
+      <title>Create Database Schema</title>
+      <description>Define models and run migrations</description>
+      <complexity>medium</complexity>
+    </node>
   </nodes>
 
   <edges>
-    <edge id="e1" from="n1" to="n2" />
-    <edge id="e2" from="n2" to="n3" />
+    <!-- n1 branches to multiple options - user must select one -->
+    <edge id="e1" from="n1" to="n2_postgres" />
+    <edge id="e2" from="n1" to="n2_sqlite" />
+    <!-- Both branches converge to n3 -->
+    <edge id="e3" from="n2_postgres" to="n3" />
+    <edge id="e4" from="n2_sqlite" to="n3" />
   </edges>
 </plan>
 ```
 
 ---
 
-## Branching Rules (CRITICAL FOR UI RENDERING)
+## Branching Rules (Graph-Based Branch Detection)
 
-When you create decision nodes with branches, you **MUST** follow these rules for the UI to render correctly:
+Branches are **inferred from the graph structure**, not declared explicitly. When a node has multiple outgoing edges, it becomes a branch point.
 
-### Rule 1: Every branch needs follow-up tasks
-For EACH branch option in a decision node, create at least one task node that is linked to that specific branch.
+### How Branches Work
 
-### Rule 2: Use branch_parent and branch_id attributes
-Tasks that belong to a specific branch MUST have both attributes:
+1. **Branch Detection**: When a node has multiple outgoing edges (e.g., `n1 -> n2_a` and `n1 -> n2_b`), the system detects it as a branch point
+2. **Branch Options**: The target nodes (`n2_a`, `n2_b`) become the branch options displayed to the user
+3. **User Selection**: The UI shows a "Select Branch" requirement. User clicks to see options and selects one
+4. **Execution**: Only the selected branch path is executed; unselected branches are skipped
+
+### Rule 1: Each branch option is a real task node
+Branch options are full task nodes with their own title, description, and work to perform:
 ```xml
-<node id="n3" type="task" branch_parent="n2" branch_id="b1">
-```
-- `branch_parent`: The ID of the decision node (e.g., "n2")
-- `branch_id`: The ID of the specific branch this task belongs to (e.g., "b1")
-
-### Rule 3: Create parallel branch paths
-If a decision has 3 branches (b1, b2, b3), you need tasks for each:
-```xml
-<!-- Decision node -->
-<node id="n2" type="decision">
-  <branch id="b1" label="Option A">...</branch>
-  <branch id="b2" label="Option B">...</branch>
-  <branch id="b3" label="Option C">...</branch>
+<!-- Branch Option A -->
+<node id="n2_a" type="task" status="pending">
+  <title>Option A: Use Tailwind CSS</title>
+  <description>Set up styling with Tailwind CSS utility classes</description>
+  <pros>Fast development, consistent design, small bundle size</pros>
+  <cons>HTML can get verbose with many utility classes</cons>
+  <complexity>low</complexity>
 </node>
 
-<!-- Tasks for branch b1 (Option A) -->
-<node id="n3" type="task" branch_parent="n2" branch_id="b1">
-  <title>Implement Option A</title>
+<!-- Branch Option B -->
+<node id="n2_b" type="task" status="pending">
+  <title>Option B: Use CSS Modules</title>
+  <description>Set up styling with scoped CSS modules</description>
+  <pros>Clean HTML, full CSS control, familiar syntax</pros>
+  <cons>More files to manage, slower iteration</cons>
+  <complexity>low</complexity>
 </node>
-
-<!-- Tasks for branch b2 (Option B) -->
-<node id="n4" type="task" branch_parent="n2" branch_id="b2">
-  <title>Implement Option B</title>
-</node>
-
-<!-- Tasks for branch b3 (Option C) -->
-<node id="n5" type="task" branch_parent="n2" branch_id="b3">
-  <title>Implement Option C</title>
-</node>
-
-<!-- Edges connect decision to ALL branch tasks -->
-<edge from="n2" to="n3" />
-<edge from="n2" to="n4" />
-<edge from="n2" to="n5" />
 ```
 
-### Rule 4: Branches can converge
-After branch-specific tasks, you can have a common task that all branches lead to:
+### Rule 2: Use edges to create branches
+Connect multiple edges from the same source node to create a branch point:
+```xml
+<edges>
+  <!-- n1 branches to n2_a and n2_b - user must select one -->
+  <edge id="e1" from="n1" to="n2_a" />
+  <edge id="e2" from="n1" to="n2_b" />
+</edges>
+```
+
+### Rule 3: Branches can converge
+After branch-specific tasks, connect all branches to a common next step:
 ```xml
 <!-- Common task after all branches -->
-<node id="n6" type="task">
-  <title>Continue with shared step</title>
+<node id="n3" type="task">
+  <title>Continue with styling</title>
 </node>
 
-<edge from="n3" to="n6" />
-<edge from="n4" to="n6" />
-<edge from="n5" to="n6" />
+<edge from="n2_a" to="n3" />
+<edge from="n2_b" to="n3" />
+```
+
+### Rule 4: Include pros and cons on branch options
+Add `<pros>` and `<cons>` directly on branch option nodes to help users decide:
+```xml
+<node id="n2_postgres" type="task" status="pending">
+  <title>Set up PostgreSQL</title>
+  <pros>ACID compliance, complex queries, strong ecosystem</pros>
+  <cons>Requires server setup, more complex scaling</cons>
+</node>
 ```
 
 ---
@@ -640,7 +648,7 @@ Loop on `check_rerun` after completion to handle user rerun requests.
 Before approving, users can:
 - **Click nodes** to see full details (description, risks, expected output)
 - **Fill dynamic fields** with their API keys, configuration values
-- **Select branches** at decision nodes to choose their preferred approach
+- **Select branches** at branch points to choose their preferred approach
 - **Attach files** to nodes — you'll receive the file paths to reference
 - **Add meta instructions** — specific guidance for how to execute that node
 
@@ -743,7 +751,7 @@ Users attach MCP servers because they want specific capabilities for specific no
 ## Best Practices
 
 1. **Decompose thoroughly**: Each action should be its own node
-2. **Use decision nodes**: Don't assume the user's preference — let them choose
+2. **Create branch points**: When multiple approaches exist, create separate task nodes for each option so users can choose
 3. **Declare all inputs**: Any config needed at runtime should be a dynamic field
 4. **Be specific**: Descriptions should leave no ambiguity about what the step does
 5. **Document risks**: Show you've considered what could go wrong

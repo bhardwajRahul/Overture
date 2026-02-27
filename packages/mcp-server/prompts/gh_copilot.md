@@ -43,7 +43,7 @@ For every task you receive, your plan must include:
 
 1. **Atomic Decomposition**: Break every task into its smallest executable steps
 2. **Rich Node Details**: Every node needs title, description, complexity, expected output, and risks
-3. **Decision Points**: Use `decision` nodes whenever multiple valid approaches exist
+3. **Branch Points**: When multiple valid approaches exist, create separate task nodes for each option and connect them from a common parent node
 4. **Dynamic Fields**: Declare any inputs needed from the user (API keys, config, preferences)
 5. **Logical Dependencies**: Edges should reflect true execution order
 
@@ -110,13 +110,13 @@ If a user asks for "a full-stack e-commerce app with Stripe integration," your p
 - Initialize Git repository with .gitignore
 
 **Database Phase:**
-- Decision node: Choose database (PostgreSQL vs Planetscale vs Supabase)
+- Branch point: Choose database (PostgreSQL vs Planetscale vs Supabase)
 - Configure Prisma ORM with selected database
 - Create database schema (products, users, orders, cart)
 - Set up database migrations
 
 **Authentication Phase:**
-- Decision node: Choose auth approach (NextAuth vs Clerk vs custom)
+- Branch point: Choose auth approach (NextAuth vs Clerk vs custom)
 - Implement sign up flow with email verification
 - Implement login flow with session management
 - Add password reset functionality
@@ -147,7 +147,7 @@ If a user asks for "a full-stack e-commerce app with Stripe integration," your p
 - Add email notifications
 
 **Deployment:**
-- Decision node: Choose platform (Vercel vs Railway vs custom)
+- Branch point: Choose platform (Vercel vs Railway vs custom)
 - Configure environment variables
 - Set up CI/CD pipeline
 - Configure production database
@@ -326,51 +326,24 @@ If the user asks for something completely unrelated to the current plan (e.g., "
       />
     </node>
 
-    <!-- Decision node when multiple approaches are valid -->
-    <node id="n2" type="decision" status="pending">
-      <title>Select Authentication Strategy</title>
-      <description>
-        Choose how users will authenticate with your application.
-        This affects security model, user experience, and maintenance burden.
-      </description>
+    <!-- Branch point: n1 has multiple outgoing edges, creating a choice -->
+    <!-- Each branch option is a real task node with pros/cons -->
 
-      <branch id="b1" label="NextAuth.js">
-        <description>Full-featured auth library with provider support</description>
-        <pros>Many OAuth providers, session management, database adapters</pros>
-        <cons>Can be complex to customize, learning curve</cons>
-      </branch>
-
-      <branch id="b2" label="Clerk">
-        <description>Managed authentication service</description>
-        <pros>Beautiful UI components, easy setup, handles edge cases</pros>
-        <cons>Third-party dependency, potential vendor lock-in, costs at scale</cons>
-      </branch>
-
-      <branch id="b3" label="Custom JWT">
-        <description>Build authentication from scratch</description>
-        <pros>Full control, no dependencies, deep understanding</pros>
-        <cons>Security risks if done wrong, more code to maintain</cons>
-      </branch>
-    </node>
-
-    <!-- Task linked to a specific branch -->
-    <node id="n3" type="task" status="pending" branch_parent="n2" branch_id="b1">
+    <!-- Branch Option A: NextAuth.js -->
+    <node id="n2_nextauth" type="task" status="pending">
       <title>Configure NextAuth.js</title>
       <description>
         Set up NextAuth.js with email/password and OAuth providers.
         Configure session strategy and database adapter.
       </description>
       <complexity>medium</complexity>
+      <pros>Many OAuth providers, session management, database adapters</pros>
+      <cons>Can be complex to customize, learning curve</cons>
       <expected_output>
         - /app/api/auth/[...nextauth]/route.ts configured
         - Prisma adapter connected
         - Google OAuth provider enabled
-        - Session callback customized
       </expected_output>
-      <risks>
-        - OAuth redirect URLs must match exactly
-        - Database session table must exist
-      </risks>
 
       <dynamic_field
         id="f4"
@@ -390,74 +363,114 @@ If the user asks for something completely unrelated to the current plan (e.g., "
         setup_instructions="From the same OAuth 2.0 Client ID"
       />
     </node>
+
+    <!-- Branch Option B: Clerk -->
+    <node id="n2_clerk" type="task" status="pending">
+      <title>Configure Clerk Authentication</title>
+      <description>Set up Clerk managed authentication service with prebuilt components</description>
+      <complexity>low</complexity>
+      <pros>Beautiful UI components, easy setup, handles edge cases</pros>
+      <cons>Third-party dependency, potential vendor lock-in, costs at scale</cons>
+      <expected_output>
+        - Clerk provider wrapped around app
+        - Sign-in/sign-up pages configured
+        - Middleware protecting routes
+      </expected_output>
+
+      <dynamic_field
+        id="f6"
+        name="clerk_publishable_key"
+        type="string"
+        required="true"
+        title="Clerk Publishable Key"
+        setup_instructions="Get from dashboard.clerk.com"
+      />
+    </node>
+
+    <!-- Task after branch convergence -->
+    <node id="n3" type="task" status="pending">
+      <title>Create Protected Routes</title>
+      <description>Set up route protection using the configured auth system</description>
+      <complexity>low</complexity>
+    </node>
   </nodes>
 
   <edges>
-    <edge id="e1" from="n1" to="n2" />
-    <edge id="e2" from="n2" to="n3" />
+    <!-- n1 branches to multiple auth options - user must select one -->
+    <edge id="e1" from="n1" to="n2_nextauth" />
+    <edge id="e2" from="n1" to="n2_clerk" />
+    <!-- Both branches converge to n3 -->
+    <edge id="e3" from="n2_nextauth" to="n3" />
+    <edge id="e4" from="n2_clerk" to="n3" />
   </edges>
 </plan>
 ```
 
 ---
 
-## Branching Rules (CRITICAL FOR UI RENDERING)
+## Branching Rules (Graph-Based Branch Detection)
 
-When you create decision nodes with branches, you **MUST** follow these rules for the UI to render correctly:
+Branches are **inferred from the graph structure**, not declared explicitly. When a node has multiple outgoing edges, it becomes a branch point.
 
-### Rule 1: Every branch needs follow-up tasks
-For EACH branch option in a decision node, create at least one task node that is linked to that specific branch.
+### How Branches Work
 
-### Rule 2: Use branch_parent and branch_id attributes
-Tasks that belong to a specific branch MUST have both attributes:
+1. **Branch Detection**: When a node has multiple outgoing edges (e.g., `n1 -> n2_a` and `n1 -> n2_b`), the system detects it as a branch point
+2. **Branch Options**: The target nodes (`n2_a`, `n2_b`) become the branch options displayed to the user
+3. **User Selection**: The UI shows a "Select Branch" requirement. User clicks to see options and selects one
+4. **Execution**: Only the selected branch path is executed; unselected branches are skipped
+
+### Rule 1: Each branch option is a real task node
+Branch options are full task nodes with their own title, description, and work to perform:
 ```xml
-<node id="n3" type="task" branch_parent="n2" branch_id="b1">
-```
-- `branch_parent`: The ID of the decision node (e.g., "n2")
-- `branch_id`: The ID of the specific branch this task belongs to (e.g., "b1")
-
-### Rule 3: Create parallel branch paths
-If a decision has 3 branches (b1, b2, b3), you need tasks for each:
-```xml
-<!-- Decision node -->
-<node id="n2" type="decision">
-  <branch id="b1" label="Option A">...</branch>
-  <branch id="b2" label="Option B">...</branch>
-  <branch id="b3" label="Option C">...</branch>
+<!-- Branch Option A -->
+<node id="n2_a" type="task" status="pending">
+  <title>Option A: Use Tailwind CSS</title>
+  <description>Set up styling with Tailwind CSS utility classes</description>
+  <pros>Fast development, consistent design, small bundle size</pros>
+  <cons>HTML can get verbose with many utility classes</cons>
+  <complexity>low</complexity>
 </node>
 
-<!-- Tasks for branch b1 (Option A) -->
-<node id="n3" type="task" branch_parent="n2" branch_id="b1">
-  <title>Implement Option A</title>
+<!-- Branch Option B -->
+<node id="n2_b" type="task" status="pending">
+  <title>Option B: Use CSS Modules</title>
+  <description>Set up styling with scoped CSS modules</description>
+  <pros>Clean HTML, full CSS control, familiar syntax</pros>
+  <cons>More files to manage, slower iteration</cons>
+  <complexity>low</complexity>
 </node>
-
-<!-- Tasks for branch b2 (Option B) -->
-<node id="n4" type="task" branch_parent="n2" branch_id="b2">
-  <title>Implement Option B</title>
-</node>
-
-<!-- Tasks for branch b3 (Option C) -->
-<node id="n5" type="task" branch_parent="n2" branch_id="b3">
-  <title>Implement Option C</title>
-</node>
-
-<!-- Edges connect decision to ALL branch tasks -->
-<edge from="n2" to="n3" />
-<edge from="n2" to="n4" />
-<edge from="n2" to="n5" />
 ```
 
-### Rule 4: Branches can converge
-After branch-specific tasks, you can have a common task that all branches lead to:
+### Rule 2: Use edges to create branches
+Connect multiple edges from the same source node to create a branch point:
+```xml
+<edges>
+  <!-- n1 branches to n2_a and n2_b - user must select one -->
+  <edge id="e1" from="n1" to="n2_a" />
+  <edge id="e2" from="n1" to="n2_b" />
+</edges>
+```
+
+### Rule 3: Branches can converge
+After branch-specific tasks, connect all branches to a common next step:
 ```xml
 <!-- Common task after all branches -->
-<node id="n6" type="task">
-  <title>Continue with shared step</title>
+<node id="n3" type="task">
+  <title>Continue with styling</title>
 </node>
 
-<edge from="n3" to="n6" />
-<edge from="n4" to="n6" />
-<edge from="n5" to="n6" />
+<edge from="n2_a" to="n3" />
+<edge from="n2_b" to="n3" />
+```
+
+### Rule 4: Include pros and cons on branch options
+Add `<pros>` and `<cons>` directly on branch option nodes to help users decide:
+```xml
+<node id="n2_postgres" type="task" status="pending">
+  <title>Set up PostgreSQL</title>
+  <pros>ACID compliance, complex queries, strong ecosystem</pros>
+  <cons>Requires server setup, more complex scaling</cons>
+</node>
 ```
 
 ---
@@ -913,7 +926,7 @@ Users attach MCP servers because they want specific capabilities for specific no
 
 1. **Decompose thoroughly**: One action per node. "Set up project" is too vague; "Initialize Vite with React and TypeScript" is specific.
 
-2. **Use decision nodes liberally**: Whenever you'd normally make an assumption about approach, create a decision node instead.
+2. **Create branch points**: Whenever you'd normally make an assumption about approach, create separate task nodes for each option so users can choose.
 
 3. **Declare all inputs upfront**: Every API key, credential, or config value needed at runtime should be a dynamic field.
 
@@ -943,7 +956,7 @@ Users attach MCP servers because they want specific capabilities for specific no
 
 **With Overture:**
 - User: "Build me an e-commerce site"
-- You: Generate detailed plan with database decision node
+- You: Generate detailed plan with database branch options
 - User: Reviews plan, selects PostgreSQL, adds Stripe API key, attaches design file
 - You: Execute exactly what they approved with their exact inputs
 - Result: Perfect alignment, happy user
