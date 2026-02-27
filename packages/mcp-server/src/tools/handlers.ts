@@ -445,7 +445,7 @@ export function handleStreamPlanChunk(
           // They will be broadcast after post-processing
           break;
 
-        case 'complete':
+        case 'complete': {
           // Post-process to handle decision nodes and detect branch points
           postProcessPlan(projectId);
           // Broadcast remaining edges after post-processing
@@ -457,6 +457,7 @@ export function handleStreamPlanChunk(
           wsManager.broadcastToProject(projectId, { type: 'plan_ready', projectId });
           currentParsers.delete(projectId);
           break;
+        }
 
         case 'error':
           console.error('[Overture] XML parse error:', event.error);
@@ -551,7 +552,7 @@ export function handleSubmitPlan(
         // Don't broadcast edges yet - they may involve decision nodes
         break;
 
-      case 'complete':
+      case 'complete': {
         console.error('[Overture] Plan parsing complete, running post-processing...');
         // Post-process to handle decision nodes and detect branch points
         postProcessPlan(projectId);
@@ -564,6 +565,7 @@ export function handleSubmitPlan(
         multiProjectPlanStore.updatePlanStatus(projectId, 'ready');
         wsManager.broadcastToProject(projectId, { type: 'plan_ready', projectId });
         break;
+      }
 
       case 'error':
         console.error('[Overture] XML parse error:', event.error);
