@@ -284,6 +284,7 @@ export type WSMessage =
   | { type: 'node_added'; node: PlanNode; projectId?: string }
   | { type: 'edge_added'; edge: PlanEdge; projectId?: string }
   | { type: 'plan_ready'; projectId?: string }
+  | { type: 'plan_approved'; projectId?: string }
   | { type: 'node_status_updated'; nodeId: string; status: NodeStatus; output?: string; structuredOutput?: StructuredOutput; projectId?: string }
   | { type: 'plan_completed'; projectId?: string }
   | { type: 'plan_failed'; error: string; projectId?: string }
