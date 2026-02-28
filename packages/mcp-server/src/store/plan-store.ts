@@ -10,7 +10,8 @@ import {
   PlanWithProject,
   PersistedPlan,
   ResumePlanInfo,
-  PlanDiff
+  PlanDiff,
+  StructuredOutput
 } from '../types.js';
 import { historyStorage } from '../storage/history-storage.js';
 import { calculatePlanDiff } from '../utils/plan-diff.js';
@@ -258,7 +259,7 @@ class MultiProjectPlanStore {
     }
   }
 
-  updateNodeStatus(projectId: string, nodeId: string, status: NodeStatus, output?: string): void {
+  updateNodeStatus(projectId: string, nodeId: string, status: NodeStatus, output?: string, structuredOutput?: StructuredOutput): void {
     const state = this.projects.get(projectId);
     if (!state) return;
 
@@ -267,6 +268,9 @@ class MultiProjectPlanStore {
       node.status = status;
       if (output) {
         node.output = output;
+      }
+      if (structuredOutput) {
+        node.structuredOutput = structuredOutput;
       }
       this.persistToHistory(projectId);
     }
@@ -959,8 +963,8 @@ class LegacyPlanStore {
     multiProjectPlanStore.updatePlanStatus(this.projectId, status);
   }
 
-  updateNodeStatus(nodeId: string, status: NodeStatus, output?: string): void {
-    multiProjectPlanStore.updateNodeStatus(this.projectId, nodeId, status, output);
+  updateNodeStatus(nodeId: string, status: NodeStatus, output?: string, structuredOutput?: StructuredOutput): void {
+    multiProjectPlanStore.updateNodeStatus(this.projectId, nodeId, status, output, structuredOutput);
   }
 
   setApproval(

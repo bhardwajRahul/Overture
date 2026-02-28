@@ -40,7 +40,7 @@ type MessageType =
   | { type: 'node_added'; node: PlanNode; projectId?: string }
   | { type: 'edge_added'; edge: PlanEdge; projectId?: string }
   | { type: 'plan_ready'; projectId?: string }
-  | { type: 'node_status_updated'; nodeId: string; status: PlanNode['status']; output?: string; projectId?: string }
+  | { type: 'node_status_updated'; nodeId: string; status: PlanNode['status']; output?: string; structuredOutput?: PlanNode['structuredOutput']; projectId?: string }
   | { type: 'plan_completed'; projectId?: string }
   | { type: 'plan_failed'; error: string; projectId?: string }
   | { type: 'plan_paused'; projectId?: string }
@@ -214,12 +214,13 @@ export function useWebSocket() {
             projectId,
             message.nodeId,
             message.status,
-            message.output
+            message.output,
+            message.structuredOutput
           );
         }
 
         // Also update legacy store
-        updateNodeStatus(message.nodeId, message.status, message.output);
+        updateNodeStatus(message.nodeId, message.status, message.output, message.structuredOutput);
         break;
       }
 

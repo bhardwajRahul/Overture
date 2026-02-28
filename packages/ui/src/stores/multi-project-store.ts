@@ -109,7 +109,7 @@ interface MultiProjectState {
   addProjectNode: (projectId: string, node: PlanNode) => void;
   addProjectEdge: (projectId: string, edge: PlanEdge) => void;
   updateProjectPlanStatus: (projectId: string, status: Plan['status']) => void;
-  updateProjectNodeStatus: (projectId: string, nodeId: string, status: PlanNode['status'], output?: string) => void;
+  updateProjectNodeStatus: (projectId: string, nodeId: string, status: PlanNode['status'], output?: string, structuredOutput?: PlanNode['structuredOutput']) => void;
   setProjectFieldValue: (projectId: string, nodeId: string, fieldId: string, value: string) => void;
   setProjectSelectedBranch: (projectId: string, nodeId: string, branchId: string) => void;
   setProjectNodeConfig: (projectId: string, nodeId: string, config: Partial<NodeConfig>) => void;
@@ -333,7 +333,7 @@ export const useMultiProjectStore = create<MultiProjectState>((set, get) => ({
       return { projectData: newProjectData };
     }),
 
-  updateProjectNodeStatus: (projectId, nodeId, status, output) =>
+  updateProjectNodeStatus: (projectId, nodeId, status, output, structuredOutput) =>
     set((state) => {
       const newProjectData = new Map(state.projectData);
       const existing = newProjectData.get(projectId);
@@ -341,7 +341,12 @@ export const useMultiProjectStore = create<MultiProjectState>((set, get) => ({
         newProjectData.set(projectId, {
           ...existing,
           nodes: existing.nodes.map((n) =>
-            n.id === nodeId ? { ...n, status, output: output ?? n.output } : n
+            n.id === nodeId ? {
+              ...n,
+              status,
+              output: output ?? n.output,
+              structuredOutput: structuredOutput ?? n.structuredOutput
+            } : n
           ),
         });
       }

@@ -5,7 +5,7 @@ You have access to Overture, a visual plan execution tool that displays your exe
 ## How Overture Works
 
 1. **Generate Plan**: When given a task, create a comprehensive XML plan following the schema below
-2. **Submit to Overture**: Use the `submit_plan` or `stream_plan_chunk` MCP tool to send the plan
+2. **Submit to Overture**: Use the `submit_plan` MCP tool to send the plan
 3. **Wait for Approval**: Use the `get_approval` tool - this blocks until the user approves the plan in the visual UI
 4. **Execute with Updates**: As you execute each step, use `update_node_status` to update the visual progress
 5. **Complete**: When done, call `plan_completed` or `plan_failed`
@@ -37,37 +37,56 @@ You have access to Overture, a visual plan execution tool that displays your exe
       />
     </node>
 
-    <!-- Decision Node: A branching point with options -->
-    <node id="n2" type="decision" status="pending">
-      <title>Choose implementation approach</title>
-      <description>Description of the decision</description>
-
-      <branch id="b1" label="Option A">
-        <description>Details about this approach</description>
-        <pros>Advantages of this option</pros>
-        <cons>Disadvantages of this option</cons>
-      </branch>
-
-      <branch id="b2" label="Option B">
-        <description>Details about this approach</description>
-        <pros>Advantages of this option</pros>
-        <cons>Disadvantages of this option</cons>
-      </branch>
+    <!-- Branch Option Nodes: When a node has multiple outgoing edges, those targets become branch options -->
+    <!-- The user will be asked to select which branch to take before execution -->
+    <node id="n2_a" type="task" status="pending">
+      <title>Option A: Use Tailwind CSS</title>
+      <description>Set up styling with Tailwind CSS utility classes</description>
+      <pros>Fast development, consistent design, small bundle size</pros>
+      <cons>HTML can get verbose with many utility classes</cons>
+      <complexity>low</complexity>
     </node>
 
-    <!-- Task that belongs to a branch -->
-    <node id="n3" type="task" status="pending" branch_parent="n2" branch_id="b1">
-      <title>Task specific to Option A</title>
-      <description>This task only runs if user selects Option A</description>
+    <node id="n2_b" type="task" status="pending">
+      <title>Option B: Use CSS Modules</title>
+      <description>Set up styling with scoped CSS modules</description>
+      <pros>Clean HTML, full CSS control, familiar syntax</pros>
+      <cons>More files to manage, slower iteration</cons>
+      <complexity>low</complexity>
+    </node>
+
+    <node id="n3" type="task" status="pending">
+      <title>Continue with styling</title>
+      <description>Build components with the selected styling approach</description>
     </node>
   </nodes>
 
   <edges>
-    <edge id="e1" from="n1" to="n2" />
-    <!-- Branch edges are implicit based on branch_parent/branch_id -->
+    <!-- When a node has multiple outgoing edges, it becomes a branch point -->
+    <!-- n1 branches to n2_a and n2_b - user must select one -->
+    <edge id="e1" from="n1" to="n2_a" />
+    <edge id="e2" from="n1" to="n2_b" />
+    <!-- Both branches converge to n3 -->
+    <edge id="e3" from="n2_a" to="n3" />
+    <edge id="e4" from="n2_b" to="n3" />
   </edges>
 </plan>
 ```
+
+### How Branches Work
+
+Branches are **inferred from the graph structure**, not declared explicitly:
+
+1. **Branch Detection**: When a node has multiple outgoing edges (e.g., `n1 -> n2_a` and `n1 -> n2_b`), the system detects it as a branch point
+2. **Branch Options**: The target nodes (`n2_a`, `n2_b`) become the branch options
+3. **User Selection**: The UI shows a "Select Branch" requirement in the checklist. User clicks it to see the options and selects one
+4. **Execution**: Only the selected branch path is executed; unselected branches are skipped
+
+**Each branch option is a real task node** with its own:
+- `title` and `description`
+- `pros` and `cons` (displayed to help user decide)
+- `complexity`, `expected_output`, `risks`
+- `dynamic_field` elements (if needed)
 
 ## Available MCP Tools
 
@@ -75,12 +94,6 @@ You have access to Overture, a visual plan execution tool that displays your exe
 Submit a complete plan XML at once.
 ```json
 { "plan_xml": "<plan>...</plan>" }
-```
-
-### `stream_plan_chunk`
-Stream plan XML incrementally (for real-time node appearance).
-```json
-{ "xml_chunk": "<node id=\"n1\">..." }
 ```
 
 ### `get_approval`
@@ -123,7 +136,7 @@ Mark the plan as failed with an error.
 
 1. **Be Exhaustive**: Break down tasks to atomic steps. Don't say "build landing page" - list every component, every section.
 
-2. **Use Decision Nodes**: When there are valid alternative approaches, create a decision node so the user can choose.
+2. **Create Branches with Multiple Edges**: When there are valid alternative approaches, create multiple task nodes (one for each option) and connect them all from the same parent node. Each option should have `pros` and `cons` to help the user decide.
 
 3. **Add Dynamic Fields**: For any configuration, API keys, or choices needed during execution, add dynamic fields so the user can provide them before approving.
 
@@ -132,6 +145,8 @@ Mark the plan as failed with an error.
 5. **Document Risks**: Note potential issues so the user knows what to watch for.
 
 6. **Order Matters**: Structure edges so dependencies are clear. Parallel tasks should not have edges between them.
+
+7. **Branch Options are Real Tasks**: Each branch option should be a fully-specified task node with title, description, pros, cons, and any required fields. The user will see all this information when selecting which branch to take.
 
 ## Example: Simple Web App
 
@@ -153,58 +168,57 @@ Mark the plan as failed with an error.
       <complexity>low</complexity>
     </node>
 
-    <node id="n3" type="decision" status="pending">
-      <title>Choose styling approach</title>
-      <description>Select how to style the application</description>
-      <branch id="b1" label="Tailwind CSS">
-        <description>Utility-first CSS framework</description>
-        <pros>Fast development, consistent design, small bundle</pros>
-        <cons>HTML can get verbose</cons>
-      </branch>
-      <branch id="b2" label="CSS Modules">
-        <description>Scoped CSS with traditional approach</description>
-        <pros>Clean HTML, full CSS control</pros>
-        <cons>More files, slower iteration</cons>
-      </branch>
-    </node>
-
-    <node id="n4" type="task" status="pending" branch_parent="n3" branch_id="b1">
+    <!-- Branch Option A: Tailwind CSS -->
+    <node id="n3_tailwind" type="task" status="pending">
       <title>Set up Tailwind CSS</title>
-      <description>Install and configure Tailwind CSS with Vite</description>
+      <description>Install and configure Tailwind CSS with Vite for utility-first styling</description>
+      <pros>Fast development, consistent design, small bundle size</pros>
+      <cons>HTML can get verbose with many utility classes</cons>
       <complexity>low</complexity>
+      <expected_output>Tailwind CSS configured and ready to use</expected_output>
     </node>
 
-    <node id="n5" type="task" status="pending">
+    <!-- Branch Option B: CSS Modules -->
+    <node id="n3_modules" type="task" status="pending">
+      <title>Set up CSS Modules</title>
+      <description>Configure CSS Modules for scoped, traditional CSS styling</description>
+      <pros>Clean HTML, full CSS control, familiar syntax</pros>
+      <cons>More files to manage, slower iteration</cons>
+      <complexity>low</complexity>
+      <expected_output>CSS Modules configured and ready to use</expected_output>
+    </node>
+
+    <node id="n4" type="task" status="pending">
       <title>Create TodoItem component</title>
       <description>Build the individual todo item component with checkbox and delete button</description>
       <complexity>medium</complexity>
     </node>
 
-    <node id="n6" type="task" status="pending">
+    <node id="n5" type="task" status="pending">
       <title>Create TodoList component</title>
       <description>Build the list container that renders all todos</description>
       <complexity>low</complexity>
     </node>
 
-    <node id="n7" type="task" status="pending">
+    <node id="n6" type="task" status="pending">
       <title>Create AddTodo component</title>
       <description>Build the input form for adding new todos</description>
       <complexity>low</complexity>
     </node>
 
-    <node id="n8" type="task" status="pending">
+    <node id="n7" type="task" status="pending">
       <title>Implement Zustand store</title>
       <description>Create the state management store for todos with add, toggle, delete actions</description>
       <complexity>medium</complexity>
     </node>
 
-    <node id="n9" type="task" status="pending">
+    <node id="n8" type="task" status="pending">
       <title>Wire up components</title>
       <description>Connect all components to the store and assemble in App.tsx</description>
       <complexity>low</complexity>
     </node>
 
-    <node id="n10" type="task" status="pending">
+    <node id="n9" type="task" status="pending">
       <title>Add local storage persistence</title>
       <description>Persist todos to localStorage so they survive page refresh</description>
       <complexity>low</complexity>
@@ -213,13 +227,18 @@ Mark the plan as failed with an error.
 
   <edges>
     <edge id="e1" from="n1" to="n2" />
-    <edge id="e2" from="n2" to="n3" />
-    <edge id="e3" from="n3" to="n5" />
-    <edge id="e4" from="n5" to="n6" />
-    <edge id="e5" from="n6" to="n7" />
-    <edge id="e6" from="n7" to="n8" />
-    <edge id="e7" from="n8" to="n9" />
-    <edge id="e8" from="n9" to="n10" />
+    <!-- n2 branches to styling options - user selects one -->
+    <edge id="e2" from="n2" to="n3_tailwind" />
+    <edge id="e3" from="n2" to="n3_modules" />
+    <!-- Both styling options converge to n4 -->
+    <edge id="e4" from="n3_tailwind" to="n4" />
+    <edge id="e5" from="n3_modules" to="n4" />
+    <!-- Continue linear flow -->
+    <edge id="e6" from="n4" to="n5" />
+    <edge id="e7" from="n5" to="n6" />
+    <edge id="e8" from="n6" to="n7" />
+    <edge id="e9" from="n7" to="n8" />
+    <edge id="e10" from="n8" to="n9" />
   </edges>
 </plan>
 ```
@@ -244,6 +263,101 @@ If a node fails:
 update_node_status(n5, "failed", "Error: could not install dependencies")
 plan_failed("Installation failed due to network error")
 ```
+
+---
+
+## Structured Output Format
+
+When completing a node, you can provide structured XML output that will be rendered in a rich, expandable UI. This is **optional** but **recommended** for better user experience.
+
+### XML Schema
+
+```xml
+<execution_output>
+  <!-- Summary of what was accomplished (required) -->
+  <overview>Brief description of what was done in this node</overview>
+
+  <!-- Files that were modified -->
+  <files_changed>
+    <file path="src/components/Button.tsx" lines_added="15" lines_removed="3">
+      <diff><![CDATA[
+@@ -10,3 +10,15 @@
+- const Button = () => {
++ const Button = ({ variant = 'primary' }) => {
+      ]]></diff>
+    </file>
+  </files_changed>
+
+  <!-- New files created -->
+  <files_created>
+    <file path="src/utils/helpers.ts" lines="42" />
+  </files_created>
+
+  <!-- Files deleted -->
+  <files_deleted>
+    <file path="src/old-component.tsx" />
+  </files_deleted>
+
+  <!-- Packages installed -->
+  <packages_installed>
+    <package name="zustand" version="4.5.0" dev="false" />
+    <package name="@types/node" version="20.0.0" dev="true" />
+  </packages_installed>
+
+  <!-- MCP servers configured -->
+  <mcp_setup>
+    <server name="github" status="installed" />
+  </mcp_setup>
+
+  <!-- Web searches performed -->
+  <web_searches>
+    <search query="React 19 new features" results_used="3" />
+  </web_searches>
+
+  <!-- Tool calls made (summarized) -->
+  <tool_calls>
+    <tool name="Read" count="5" />
+    <tool name="Edit" count="3" />
+    <tool name="Bash" count="2" />
+  </tool_calls>
+
+  <!-- Preview/dev server URLs -->
+  <preview_urls>
+    <url type="dev_server">http://localhost:5173</url>
+  </preview_urls>
+
+  <!-- Warnings or notes -->
+  <notes>
+    <note type="warning">API key not configured, using mock data</note>
+    <note type="info">Consider adding error boundary</note>
+  </notes>
+</execution_output>
+```
+
+### Usage Example
+
+When you call `update_node_status` with "completed" status, include the structured output:
+
+```
+update_node_status(n1, "completed", "<execution_output>
+  <overview>Created React component with TypeScript types</overview>
+  <files_created>
+    <file path=\"src/components/Header.tsx\" lines=\"45\" />
+    <file path=\"src/components/Header.test.tsx\" lines=\"28\" />
+  </files_created>
+  <packages_installed>
+    <package name=\"@testing-library/react\" version=\"14.0.0\" dev=\"true\" />
+  </packages_installed>
+</execution_output>")
+```
+
+### Guidelines
+
+1. **Always include `<overview>`** - A brief summary of what was accomplished
+2. **Include only relevant sections** - Don't add empty sections
+3. **Use CDATA for diffs** - Wrap diff content in `<![CDATA[...]]>` to avoid XML parsing issues
+4. **Note types**: Use `info` for suggestions, `warning` for potential issues, `error` for problems
+5. **Be concise** - Keep descriptions short but informative
 
 ---
 

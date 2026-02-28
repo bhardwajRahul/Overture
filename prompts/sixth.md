@@ -122,9 +122,9 @@ Use these tools via `use_mcp_tool` with server name `overture`:
 
 Overture supports multiple projects running simultaneously. Each project gets its own tab in the UI.
 
-- **`workspace_path`**: Pass the absolute path to your project directory when calling `submit_plan` or `stream_plan_chunk`. This enables project isolation and history tracking.
+- **`workspace_path`**: Pass the absolute path to your project directory when calling `submit_plan`. This enables project isolation and history tracking.
 - **`agent_type`**: Identify yourself (e.g., "sixth") so the UI shows the correct agent name.
-- **`project_id`** / **`expected_project_id`**: **CRITICAL** - These are returned in the response from `submit_plan` and `stream_plan_chunk`. **YOU MUST use this exact value** in ALL subsequent calls (`get_approval`, `update_node_status`, `plan_completed`, etc.). The frontend uses this ID to match your approval request.
+- **`project_id`** / **`expected_project_id`**: **CRITICAL** - These are returned in the response from `submit_plan`. **YOU MUST use this exact value** in ALL subsequent calls (`get_approval`, `update_node_status`, `plan_completed`, etc.). The frontend uses this ID to match your approval request.
 
 **Example workflow:**
 ```
@@ -177,7 +177,7 @@ After calling `request_plan_update`, call `get_approval()` to confirm changes.
 If the user asks for something completely unrelated to the current plan (e.g., "forget that, let's build X instead"):
 
 1. **Call `create_new_plan`** — This clears the current plan state
-2. **Call `submit_plan` or `stream_plan_chunk`** with the new plan XML
+2. **Call `submit_plan`** with the new plan XML
 3. **Call `get_approval`** to wait for user approval
 4. Proceed with execution once approved
 
@@ -388,6 +388,28 @@ Before calling `update_node_status(node_id, "completed", output)`, verify:
 - [ ] Did I read and incorporate EVERY file in `attachments`?
 - [ ] Did I follow the `metaInstructions` exactly?
 - [ ] Did I NOT do any work belonging to other nodes?
+- [ ] **Did I format the output using structured XML?** (See Structured Output Format in overture-instructions.md)
+
+### Structured Output (Recommended)
+
+When calling `update_node_status` with "completed", use structured XML output for better UI rendering:
+
+```xml
+<execution_output>
+  <overview>Brief summary of what was done</overview>
+  <files_changed>
+    <file path="path/to/file.ts" lines_added="10" lines_removed="2" />
+  </files_changed>
+  <files_created>
+    <file path="path/to/new-file.ts" lines="45" />
+  </files_created>
+  <packages_installed>
+    <package name="package-name" version="1.0.0" />
+  </packages_installed>
+</execution_output>
+```
+
+See the full schema in `overture-instructions.md` under "Structured Output Format".
 
 ---
 

@@ -5,7 +5,7 @@ You have access to Overture, a visual plan execution tool that displays your exe
 ## How Overture Works
 
 1. **Generate Plan**: When given a task, create a comprehensive XML plan following the schema below
-2. **Submit to Overture**: Use the `submit_plan` or `stream_plan_chunk` MCP tool to send the plan
+2. **Submit to Overture**: Use the `submit_plan` MCP tool to send the plan
 3. **Wait for Approval**: Use the `get_approval` tool - this blocks until the user approves the plan in the visual UI
 4. **Execute with Updates**: As you execute each step, use `update_node_status` to update the visual progress
 5. **Complete**: When done, call `plan_completed` or `plan_failed`
@@ -94,12 +94,6 @@ Branches are **inferred from the graph structure**, not declared explicitly:
 Submit a complete plan XML at once.
 ```json
 { "plan_xml": "<plan>...</plan>" }
-```
-
-### `stream_plan_chunk`
-Stream plan XML incrementally (for real-time node appearance).
-```json
-{ "xml_chunk": "<node id=\"n1\">..." }
 ```
 
 ### `get_approval`
@@ -269,6 +263,101 @@ If a node fails:
 update_node_status(n5, "failed", "Error: could not install dependencies")
 plan_failed("Installation failed due to network error")
 ```
+
+---
+
+## Structured Output Format
+
+When completing a node, you can provide structured XML output that will be rendered in a rich, expandable UI. This is **optional** but **recommended** for better user experience.
+
+### XML Schema
+
+```xml
+<execution_output>
+  <!-- Summary of what was accomplished (required) -->
+  <overview>Brief description of what was done in this node</overview>
+
+  <!-- Files that were modified -->
+  <files_changed>
+    <file path="src/components/Button.tsx" lines_added="15" lines_removed="3">
+      <diff><![CDATA[
+@@ -10,3 +10,15 @@
+- const Button = () => {
++ const Button = ({ variant = 'primary' }) => {
+      ]]></diff>
+    </file>
+  </files_changed>
+
+  <!-- New files created -->
+  <files_created>
+    <file path="src/utils/helpers.ts" lines="42" />
+  </files_created>
+
+  <!-- Files deleted -->
+  <files_deleted>
+    <file path="src/old-component.tsx" />
+  </files_deleted>
+
+  <!-- Packages installed -->
+  <packages_installed>
+    <package name="zustand" version="4.5.0" dev="false" />
+    <package name="@types/node" version="20.0.0" dev="true" />
+  </packages_installed>
+
+  <!-- MCP servers configured -->
+  <mcp_setup>
+    <server name="github" status="installed" />
+  </mcp_setup>
+
+  <!-- Web searches performed -->
+  <web_searches>
+    <search query="React 19 new features" results_used="3" />
+  </web_searches>
+
+  <!-- Tool calls made (summarized) -->
+  <tool_calls>
+    <tool name="Read" count="5" />
+    <tool name="Edit" count="3" />
+    <tool name="Bash" count="2" />
+  </tool_calls>
+
+  <!-- Preview/dev server URLs -->
+  <preview_urls>
+    <url type="dev_server">http://localhost:5173</url>
+  </preview_urls>
+
+  <!-- Warnings or notes -->
+  <notes>
+    <note type="warning">API key not configured, using mock data</note>
+    <note type="info">Consider adding error boundary</note>
+  </notes>
+</execution_output>
+```
+
+### Usage Example
+
+When you call `update_node_status` with "completed" status, include the structured output:
+
+```
+update_node_status(n1, "completed", "<execution_output>
+  <overview>Created React component with TypeScript types</overview>
+  <files_created>
+    <file path=\"src/components/Header.tsx\" lines=\"45\" />
+    <file path=\"src/components/Header.test.tsx\" lines=\"28\" />
+  </files_created>
+  <packages_installed>
+    <package name=\"@testing-library/react\" version=\"14.0.0\" dev=\"true\" />
+  </packages_installed>
+</execution_output>")
+```
+
+### Guidelines
+
+1. **Always include `<overview>`** - A brief summary of what was accomplished
+2. **Include only relevant sections** - Don't add empty sections
+3. **Use CDATA for diffs** - Wrap diff content in `<![CDATA[...]]>` to avoid XML parsing issues
+4. **Note types**: Use `info` for suggestions, `warning` for potential issues, `error` for problems
+5. **Be concise** - Keep descriptions short but informative
 
 ---
 

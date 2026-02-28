@@ -161,7 +161,6 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
 | Tool | Input | Purpose |
 |------|-------|---------|
 | `submit_plan` | `{ plan_xml, workspace_path?, agent_type? }` | Submit complete XML plan |
-| `stream_plan_chunk` | `{ xml_chunk, workspace_path?, agent_type? }` | Stream XML incrementally for real-time display |
 | `get_approval` | `{ project_id? }` | Wait for user approval (may return "pending" — call again) |
 | `update_node_status` | `{ node_id, status, output?, project_id? }` | Update execution progress |
 | `plan_completed` | `{ project_id? }` | Mark plan done |
@@ -176,9 +175,9 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
 
 Overture supports multiple projects running simultaneously. Each project gets its own tab in the UI.
 
-- **`workspace_path`**: Pass the absolute path to your project directory when calling `submit_plan` or `stream_plan_chunk`. This enables project isolation and history tracking.
+- **`workspace_path`**: Pass the absolute path to your project directory when calling `submit_plan`. This enables project isolation and history tracking.
 - **`agent_type`**: Identify yourself (e.g., "claude-code") so the UI shows the correct agent name.
-- **`project_id`** / **`expected_project_id`**: **CRITICAL** - These are returned in the response from `submit_plan` and `stream_plan_chunk`. **YOU MUST use this exact value** in ALL subsequent calls (`get_approval`, `update_node_status`, `plan_completed`, etc.). The frontend uses this ID to match your approval request.
+- **`project_id`** / **`expected_project_id`**: **CRITICAL** - These are returned in the response from `submit_plan`. **YOU MUST use this exact value** in ALL subsequent calls (`get_approval`, `update_node_status`, `plan_completed`, etc.). The frontend uses this ID to match your approval request.
 
 **Example workflow:**
 ```
@@ -252,7 +251,7 @@ After calling `request_plan_update`, call `get_approval()` to confirm changes wi
 If the user asks for something completely unrelated to the current plan (e.g., "forget that, let's build X instead"):
 
 1. **Call `create_new_plan`** — This clears the current plan state
-2. **Call `submit_plan` or `stream_plan_chunk`** with the new plan XML
+2. **Call `submit_plan`** with the new plan XML
 3. **Call `get_approval`** to wait for user approval
 4. Proceed with execution once approved
 
@@ -555,6 +554,28 @@ Before calling `update_node_status(node_id, "completed", output)`, verify:
 - [ ] Did I read and incorporate EVERY file in `attachments`?
 - [ ] Did I follow the `metaInstructions` exactly?
 - [ ] Did I NOT do any work belonging to other nodes?
+- [ ] **Did I format the output using structured XML?** (See Structured Output Format in overture-instructions.md)
+
+### Structured Output (Recommended)
+
+When calling `update_node_status` with "completed", use structured XML output for better UI rendering:
+
+```xml
+<execution_output>
+  <overview>Brief summary of what was done</overview>
+  <files_changed>
+    <file path="path/to/file.ts" lines_added="10" lines_removed="2" />
+  </files_changed>
+  <files_created>
+    <file path="path/to/new-file.ts" lines="45" />
+  </files_created>
+  <packages_installed>
+    <package name="package-name" version="1.0.0" />
+  </packages_installed>
+</execution_output>
+```
+
+See the full schema in `overture-instructions.md` under "Structured Output Format".
 
 ---
 
@@ -566,7 +587,7 @@ Before calling `update_node_status(node_id, "completed", output)`, verify:
    - If simple (single file, obvious fix): execute directly without Overture
    - If complex (multiple files, decisions, config needed): use Overture
 3. Generate comprehensive XML plan
-4. Call submit_plan (or stream_plan_chunk for incremental display)
+4. Call submit_plan
 5. Call get_approval and handle response:
    - status: "pending" → call get_approval again (user is still reviewing)
    - status: "approved" → you receive firstNode with all its config
@@ -963,9 +984,7 @@ Users attach MCP servers because they want specific capabilities for specific no
 
 8. **Honor user additions**: Always check for and follow `metaInstructions`. Always read and use `attachments`.
 
-9. **Stream for long plans**: Use `stream_plan_chunk` for plans with many nodes so users see progress immediately.
-
-10. **Honor MCP servers**: When a node has `mcpServers`, follow its `formattedInstructions` precisely — this is the user's explicit request for extended capabilities.
+9. **Honor MCP servers**: When a node has `mcpServers`, follow its `formattedInstructions` precisely — this is the user's explicit request for extended capabilities.
 
 ---
 

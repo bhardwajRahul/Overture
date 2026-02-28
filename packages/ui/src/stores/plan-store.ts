@@ -52,6 +52,69 @@ export interface McpServer {
   updatedAt: string;
 }
 
+// Structured Output Types - for rich node execution output
+export interface FileChange {
+  path: string;
+  linesAdded?: number;
+  linesRemoved?: number;
+  diff?: string;
+}
+
+export interface FileCreated {
+  path: string;
+  lines?: number;
+}
+
+export interface FileDeleted {
+  path: string;
+}
+
+export interface PackageInstalled {
+  name: string;
+  version?: string;
+  dev?: boolean;
+}
+
+export interface McpServerSetup {
+  name: string;
+  status: 'installed' | 'configured' | 'failed';
+  config?: string;
+}
+
+export interface WebSearchPerformed {
+  query: string;
+  resultsUsed?: number;
+}
+
+export interface ToolCallSummary {
+  name: string;
+  count: number;
+}
+
+export interface PreviewUrl {
+  type: string;
+  url: string;
+}
+
+export interface OutputNote {
+  type: 'info' | 'warning' | 'error';
+  message: string;
+}
+
+export interface StructuredOutput {
+  overview?: string;
+  filesChanged?: FileChange[];
+  filesCreated?: FileCreated[];
+  filesDeleted?: FileDeleted[];
+  packagesInstalled?: PackageInstalled[];
+  mcpSetup?: McpServerSetup[];
+  webSearches?: WebSearchPerformed[];
+  toolCalls?: ToolCallSummary[];
+  previewUrls?: PreviewUrl[];
+  notes?: OutputNote[];
+  raw?: string;
+}
+
 export interface PlanNode {
   id: string;
   type: NodeType;
@@ -67,6 +130,7 @@ export interface PlanNode {
   branchParent?: string;
   branchId?: string;
   output?: string; // Execution output
+  structuredOutput?: StructuredOutput; // Parsed structured output
   attachments: FileAttachment[]; // User-attached files
   metaInstructions?: string; // User instructions for the LLM
   mcpServers?: McpServer[]; // Attached MCP servers for this node
@@ -136,7 +200,7 @@ interface PlanState {
   addNode: (node: PlanNode, planId?: string) => void;
   addEdge: (edge: PlanEdge, planId?: string) => void;
   updateNode: (id: string, updates: Partial<PlanNode>, planId?: string) => void;
-  updateNodeStatus: (id: string, status: NodeStatus, output?: string, planId?: string) => void;
+  updateNodeStatus: (id: string, status: NodeStatus, output?: string, structuredOutput?: StructuredOutput, planId?: string) => void;
   setSelectedBranch: (nodeId: string, branchId: string, planId?: string) => void;
   updateFieldValue: (nodeId: string, fieldId: string, value: string, planId?: string) => void;
   addAttachment: (nodeId: string, attachment: FileAttachment, planId?: string) => void;
@@ -358,11 +422,16 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       })),
     })),
 
-  updateNodeStatus: (id, status, output, planId) =>
+  updateNodeStatus: (id, status, output, structuredOutput, planId) =>
     set((state) => ({
       plans: updatePlanData(state.plans, planId, (data) => {
         const newNodes = data.nodes.map((n) =>
-          n.id === id ? { ...n, status, output: output ?? n.output } : n
+          n.id === id ? {
+            ...n,
+            status,
+            output: output ?? n.output,
+            structuredOutput: structuredOutput ?? n.structuredOutput
+          } : n
         );
         return {
           ...data,

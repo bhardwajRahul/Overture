@@ -12,7 +12,6 @@ import { wsManager } from './websocket/ws-server.js';
 import { startHttpServer } from './http/server.js';
 import { historyStorage } from './storage/history-storage.js';
 import {
-  handleStreamPlanChunk,
   handleSubmitPlan,
   handleGetApproval,
   handleUpdateNodeStatus,
@@ -33,12 +32,6 @@ const WS_PORT = parseInt(process.env.OVERTURE_WS_PORT || '3030', 10);
 const AUTO_OPEN_BROWSER = process.env.OVERTURE_AUTO_OPEN !== 'false';
 
 // Tool schemas
-const StreamPlanChunkSchema = z.object({
-  xml_chunk: z.string().describe('A chunk of the plan XML to process'),
-  workspace_path: z.string().optional().describe('Absolute path to the workspace/project directory'),
-  agent_type: z.string().optional().describe('The type of agent (claude-code, cline, cursor, sixth, gh_copilot)'),
-});
-
 const SubmitPlanSchema = z.object({
   plan_xml: z.string().describe('The complete plan XML'),
   workspace_path: z.string().optional().describe('Absolute path to the workspace/project directory'),
@@ -138,29 +131,6 @@ const GetUsageInstructionsSchema = z.object({
 
 // Tool definitions
 const TOOLS = [
-  {
-    name: 'stream_plan_chunk',
-    description:
-      'Stream a chunk of the plan XML to Overture. IMPORTANT: Call get_usage_instructions first to learn the correct XML format and workflow. Use this to send the plan incrementally as it is generated. Each chunk will be parsed and nodes/edges will appear in real-time on the canvas.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        xml_chunk: {
-          type: 'string',
-          description: 'A chunk of the plan XML to process',
-        },
-        workspace_path: {
-          type: 'string',
-          description: 'Absolute path to the workspace/project directory. Used to identify the project for multi-project support.',
-        },
-        agent_type: {
-          type: 'string',
-          description: 'The type of agent (claude-code, cline, cursor, sixth, gh_copilot)',
-        },
-      },
-      required: ['xml_chunk'],
-    },
-  },
   {
     name: 'submit_plan',
     description:
@@ -474,19 +444,6 @@ async function main() {
 
     try {
       switch (name) {
-        case 'stream_plan_chunk': {
-          const parsed = StreamPlanChunkSchema.parse(args);
-          const result = handleStreamPlanChunk(parsed.xml_chunk, parsed.workspace_path, parsed.agent_type);
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(result),
-              },
-            ],
-          };
-        }
-
         case 'submit_plan': {
           const parsed = SubmitPlanSchema.parse(args);
           const result = handleSubmitPlan(parsed.plan_xml, parsed.workspace_path, parsed.agent_type);

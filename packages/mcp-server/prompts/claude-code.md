@@ -43,7 +43,7 @@ For every task you receive, your plan must include:
 
 1. **Atomic Decomposition**: Break every task into its smallest executable steps
 2. **Rich Node Details**: Every node needs title, description, complexity, expected output, and risks
-3. **Decision Points**: Use `decision` nodes whenever multiple valid approaches exist
+3. **Branch Options**: When multiple valid approaches exist, create task nodes for each option with pros/cons, and connect them from the same parent node
 4. **Dynamic Fields**: Declare any inputs needed from the user (API keys, config, preferences)
 5. **Logical Dependencies**: Edges should reflect true execution order
 
@@ -110,13 +110,13 @@ If a user asks for "a full-stack e-commerce app with Stripe integration," your p
 - Initialize Git repository with .gitignore
 
 **Database Phase:**
-- Decision node: Choose database (PostgreSQL vs Planetscale vs Supabase)
+- Branch options: PostgreSQL setup / Planetscale setup / Supabase setup (with pros/cons for each)
 - Configure Prisma ORM with selected database
 - Create database schema (products, users, orders, cart)
 - Set up database migrations
 
 **Authentication Phase:**
-- Decision node: Choose auth approach (NextAuth vs Clerk vs custom)
+- Branch options: NextAuth setup / Clerk setup / Custom JWT (with pros/cons for each)
 - Implement sign up flow with email verification
 - Implement login flow with session management
 - Add password reset functionality
@@ -147,7 +147,7 @@ If a user asks for "a full-stack e-commerce app with Stripe integration," your p
 - Add email notifications
 
 **Deployment:**
-- Decision node: Choose platform (Vercel vs Railway vs custom)
+- Branch options: Vercel deployment / Railway deployment / Custom server (with pros/cons for each)
 - Configure environment variables
 - Set up CI/CD pipeline
 - Configure production database
@@ -161,7 +161,7 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
 | Tool | Input | Purpose |
 |------|-------|---------|
 | `submit_plan` | `{ plan_xml, workspace_path?, agent_type? }` | Submit complete XML plan |
-| `stream_plan_chunk` | `{ xml_chunk, workspace_path?, agent_type? }` | Stream XML incrementally for real-time display |
+
 | `get_approval` | `{ project_id? }` | Wait for user approval (may return "pending" — call again) |
 | `update_node_status` | `{ node_id, status, output?, project_id? }` | Update execution progress |
 | `plan_completed` | `{ project_id? }` | Mark plan done |
@@ -176,9 +176,9 @@ Each of these becomes a node on the visual canvas with full details, risks, and 
 
 Overture supports multiple projects running simultaneously. Each project gets its own tab in the UI.
 
-- **`workspace_path`**: Pass the absolute path to your project directory when calling `submit_plan` or `stream_plan_chunk`. This enables project isolation and history tracking.
+- **`workspace_path`**: Pass the absolute path to your project directory when calling `submit_plan`. This enables project isolation and history tracking.
 - **`agent_type`**: Identify yourself (e.g., "claude-code") so the UI shows the correct agent name.
-- **`project_id`** / **`expected_project_id`**: **CRITICAL** - These are returned in the response from `submit_plan` and `stream_plan_chunk`. **YOU MUST use this exact value** in ALL subsequent calls (`get_approval`, `update_node_status`, `plan_completed`, etc.). The frontend uses this ID to match your approval request.
+- **`project_id`** / **`expected_project_id`**: **CRITICAL** - These are returned in the response from `submit_plan`. **YOU MUST use this exact value** in ALL subsequent calls (`get_approval`, `update_node_status`, `plan_completed`, etc.). The frontend uses this ID to match your approval request.
 
 **Example workflow:**
 ```
@@ -252,7 +252,7 @@ After calling `request_plan_update`, call `get_approval()` to confirm changes wi
 If the user asks for something completely unrelated to the current plan (e.g., "forget that, let's build X instead"):
 
 1. **Call `create_new_plan`** — This clears the current plan state
-2. **Call `submit_plan` or `stream_plan_chunk`** with the new plan XML
+2. **Call `submit_plan`** with the new plan XML
 3. **Call `get_approval`** to wait for user approval
 4. Proceed with execution once approved
 
@@ -326,51 +326,24 @@ If the user asks for something completely unrelated to the current plan (e.g., "
       />
     </node>
 
-    <!-- Decision node when multiple approaches are valid -->
-    <node id="n2" type="decision" status="pending">
-      <title>Select Authentication Strategy</title>
-      <description>
-        Choose how users will authenticate with your application.
-        This affects security model, user experience, and maintenance burden.
-      </description>
+    <!-- Branch Option Nodes: Create multiple task nodes and connect them from the same parent -->
+    <!-- The system detects branches from graph structure (multiple outgoing edges) -->
 
-      <branch id="b1" label="NextAuth.js">
-        <description>Full-featured auth library with provider support</description>
-        <pros>Many OAuth providers, session management, database adapters</pros>
-        <cons>Can be complex to customize, learning curve</cons>
-      </branch>
-
-      <branch id="b2" label="Clerk">
-        <description>Managed authentication service</description>
-        <pros>Beautiful UI components, easy setup, handles edge cases</pros>
-        <cons>Third-party dependency, potential vendor lock-in, costs at scale</cons>
-      </branch>
-
-      <branch id="b3" label="Custom JWT">
-        <description>Build authentication from scratch</description>
-        <pros>Full control, no dependencies, deep understanding</pros>
-        <cons>Security risks if done wrong, more code to maintain</cons>
-      </branch>
-    </node>
-
-    <!-- Task linked to a specific branch -->
-    <node id="n3" type="task" status="pending" branch_parent="n2" branch_id="b1">
+    <!-- Option 1: NextAuth.js -->
+    <node id="n2_nextauth" type="task" status="pending">
       <title>Configure NextAuth.js</title>
       <description>
         Set up NextAuth.js with email/password and OAuth providers.
-        Configure session strategy and database adapter.
+        Full-featured auth library with provider support.
       </description>
+      <pros>Many OAuth providers, session management, database adapters</pros>
+      <cons>Can be complex to customize, learning curve</cons>
       <complexity>medium</complexity>
       <expected_output>
         - /app/api/auth/[...nextauth]/route.ts configured
         - Prisma adapter connected
         - Google OAuth provider enabled
-        - Session callback customized
       </expected_output>
-      <risks>
-        - OAuth redirect URLs must match exactly
-        - Database session table must exist
-      </risks>
 
       <dynamic_field
         id="f4"
@@ -380,84 +353,151 @@ If the user asks for something completely unrelated to the current plan (e.g., "
         title="Google OAuth Client ID"
         setup_instructions="Create at console.cloud.google.com/apis/credentials"
       />
+    </node>
+
+    <!-- Option 2: Clerk -->
+    <node id="n2_clerk" type="task" status="pending">
+      <title>Configure Clerk Authentication</title>
+      <description>
+        Set up Clerk managed authentication service.
+        Beautiful UI components and easy setup.
+      </description>
+      <pros>Beautiful UI components, easy setup, handles edge cases</pros>
+      <cons>Third-party dependency, potential vendor lock-in, costs at scale</cons>
+      <complexity>low</complexity>
+      <expected_output>
+        - Clerk provider configured
+        - Sign in/up components integrated
+        - Middleware for protected routes
+      </expected_output>
 
       <dynamic_field
         id="f5"
-        name="google_client_secret"
+        name="clerk_publishable_key"
+        type="string"
+        required="true"
+        title="Clerk Publishable Key"
+        setup_instructions="Get from dashboard.clerk.com"
+      />
+    </node>
+
+    <!-- Option 3: Custom JWT -->
+    <node id="n2_jwt" type="task" status="pending">
+      <title>Implement Custom JWT Authentication</title>
+      <description>
+        Build authentication from scratch using JWT tokens.
+        Full control over the auth flow.
+      </description>
+      <pros>Full control, no dependencies, deep understanding</pros>
+      <cons>Security risks if done wrong, more code to maintain</cons>
+      <complexity>high</complexity>
+      <expected_output>
+        - JWT token generation and validation
+        - Login/logout API routes
+        - Protected route middleware
+      </expected_output>
+
+      <dynamic_field
+        id="f6"
+        name="jwt_secret"
         type="secret"
         required="true"
-        title="Google OAuth Client Secret"
-        setup_instructions="From the same OAuth 2.0 Client ID"
+        title="JWT Secret"
+        description="Secret key for signing tokens"
+        setup_instructions="Generate with: openssl rand -base64 32"
       />
+    </node>
+
+    <!-- Common task after auth setup (all branches converge here) -->
+    <node id="n3" type="task" status="pending">
+      <title>Create User Profile Page</title>
+      <description>Build user profile page using the configured auth system</description>
+      <complexity>medium</complexity>
     </node>
   </nodes>
 
   <edges>
-    <edge id="e1" from="n1" to="n2" />
-    <edge id="e2" from="n2" to="n3" />
+    <!-- n1 branches to all three auth options -->
+    <edge id="e1" from="n1" to="n2_nextauth" />
+    <edge id="e2" from="n1" to="n2_clerk" />
+    <edge id="e3" from="n1" to="n2_jwt" />
+    <!-- All auth options converge to n3 -->
+    <edge id="e4" from="n2_nextauth" to="n3" />
+    <edge id="e5" from="n2_clerk" to="n3" />
+    <edge id="e6" from="n2_jwt" to="n3" />
   </edges>
 </plan>
 ```
+
+### How Branches Work
+
+Branches are **inferred from the graph structure**, not declared with decision nodes:
+
+1. **Create task nodes for each option**: Each branch option is a real task node with its own title, description, pros, cons, and fields
+2. **Connect from the same parent**: When a node has multiple outgoing edges, those targets become branch options
+3. **User selects in UI**: The Requirements Checklist shows "Select Branch" — user clicks to see options and picks one
+4. **Only selected path executes**: Unselected branches are skipped during execution
 
 ---
 
 ## Branching Rules (CRITICAL FOR UI RENDERING)
 
-When you create decision nodes with branches, you **MUST** follow these rules for the UI to render correctly:
+Branches are created by connecting one node to multiple target nodes via edges. **Do NOT use decision nodes** — they are deprecated.
 
-### Rule 1: Every branch needs follow-up tasks
-For EACH branch option in a decision node, create at least one task node that is linked to that specific branch.
-
-### Rule 2: Use branch_parent and branch_id attributes
-Tasks that belong to a specific branch MUST have both attributes:
+### Rule 1: Create task nodes for each option
+Each branch option should be a fully-specified task node:
 ```xml
-<node id="n3" type="task" branch_parent="n2" branch_id="b1">
-```
-- `branch_parent`: The ID of the decision node (e.g., "n2")
-- `branch_id`: The ID of the specific branch this task belongs to (e.g., "b1")
-
-### Rule 3: Create parallel branch paths
-If a decision has 3 branches (b1, b2, b3), you need tasks for each:
-```xml
-<!-- Decision node -->
-<node id="n2" type="decision">
-  <branch id="b1" label="Option A">...</branch>
-  <branch id="b2" label="Option B">...</branch>
-  <branch id="b3" label="Option C">...</branch>
+<!-- Option A -->
+<node id="n2_a" type="task" status="pending">
+  <title>Option A: Use PostgreSQL</title>
+  <description>Relational database with ACID compliance</description>
+  <pros>Strong consistency, complex queries, mature ecosystem</pros>
+  <cons>Requires server setup, scaling complexity</cons>
+  <complexity>medium</complexity>
 </node>
 
-<!-- Tasks for branch b1 (Option A) -->
-<node id="n3" type="task" branch_parent="n2" branch_id="b1">
-  <title>Implement Option A</title>
+<!-- Option B -->
+<node id="n2_b" type="task" status="pending">
+  <title>Option B: Use MongoDB</title>
+  <description>Document-oriented NoSQL database</description>
+  <pros>Flexible schema, horizontal scaling, JSON-native</pros>
+  <cons>Eventual consistency, no joins</cons>
+  <complexity>medium</complexity>
 </node>
-
-<!-- Tasks for branch b2 (Option B) -->
-<node id="n4" type="task" branch_parent="n2" branch_id="b2">
-  <title>Implement Option B</title>
-</node>
-
-<!-- Tasks for branch b3 (Option C) -->
-<node id="n5" type="task" branch_parent="n2" branch_id="b3">
-  <title>Implement Option C</title>
-</node>
-
-<!-- Edges connect decision to ALL branch tasks -->
-<edge from="n2" to="n3" />
-<edge from="n2" to="n4" />
-<edge from="n2" to="n5" />
 ```
 
-### Rule 4: Branches can converge
+### Rule 2: Connect from the same parent
+The parent node connects to ALL branch options:
+```xml
+<edges>
+  <!-- n1 branches to both options -->
+  <edge id="e1" from="n1" to="n2_a" />
+  <edge id="e2" from="n1" to="n2_b" />
+</edges>
+```
+
+The system automatically detects that `n1` is a branch point because it has multiple outgoing edges.
+
+### Rule 3: Branches can converge
 After branch-specific tasks, you can have a common task that all branches lead to:
 ```xml
 <!-- Common task after all branches -->
-<node id="n6" type="task">
+<node id="n3" type="task">
   <title>Continue with shared step</title>
 </node>
 
-<edge from="n3" to="n6" />
-<edge from="n4" to="n6" />
-<edge from="n5" to="n6" />
+<edge from="n2_a" to="n3" />
+<edge from="n2_b" to="n3" />
+```
+
+### Rule 4: Include pros and cons
+Branch option nodes should have `<pros>` and `<cons>` elements to help users make informed decisions:
+```xml
+<node id="n2_a" type="task" status="pending">
+  <title>Use Tailwind CSS</title>
+  <pros>Fast development, consistent design, small bundle size</pros>
+  <cons>HTML can get verbose with many utility classes</cons>
+</node>
 ```
 
 ---
@@ -515,6 +555,28 @@ Before calling `update_node_status(node_id, "completed", output)`, verify:
 - [ ] Did I read and incorporate EVERY file in `attachments`?
 - [ ] Did I follow the `metaInstructions` exactly?
 - [ ] Did I NOT do any work belonging to other nodes?
+- [ ] **Did I format the output using structured XML?** (See Structured Output Format in overture-instructions.md)
+
+### Structured Output (Recommended)
+
+When calling `update_node_status` with "completed", use structured XML output for better UI rendering:
+
+```xml
+<execution_output>
+  <overview>Brief summary of what was done</overview>
+  <files_changed>
+    <file path="path/to/file.ts" lines_added="10" lines_removed="2" />
+  </files_changed>
+  <files_created>
+    <file path="path/to/new-file.ts" lines="45" />
+  </files_created>
+  <packages_installed>
+    <package name="package-name" version="1.0.0" />
+  </packages_installed>
+</execution_output>
+```
+
+See the full schema in `overture-instructions.md` under "Structured Output Format".
 
 ---
 
@@ -526,7 +588,7 @@ Before calling `update_node_status(node_id, "completed", output)`, verify:
    - If simple (single file, obvious fix): execute directly without Overture
    - If complex (multiple files, decisions, config needed): use Overture
 3. Generate comprehensive XML plan
-4. Call submit_plan (or stream_plan_chunk for incremental display)
+4. Call submit_plan
 5. Call get_approval and handle response:
    - status: "pending" → call get_approval again (user is still reviewing)
    - status: "approved" → you receive firstNode with all its config
@@ -909,7 +971,7 @@ Users attach MCP servers because they want specific capabilities for specific no
 
 1. **Decompose thoroughly**: One action per node. "Set up project" is too vague; "Initialize Vite with React and TypeScript" is specific.
 
-2. **Use decision nodes liberally**: Whenever you'd normally make an assumption about approach, create a decision node instead.
+2. **Create branch points**: When multiple approaches exist, create separate task nodes for each option so users can choose.
 
 3. **Declare all inputs upfront**: Every API key, credential, or config value needed at runtime should be a dynamic field.
 
@@ -939,7 +1001,7 @@ Users attach MCP servers because they want specific capabilities for specific no
 
 **With Overture:**
 - User: "Build me an e-commerce site"
-- You: Generate detailed plan with database decision node
+- You: Generate detailed plan with database branch options
 - User: Reviews plan, selects PostgreSQL, adds Stripe API key, attaches design file
 - You: Execute exactly what they approved with their exact inputs
 - Result: Perfect alignment, happy user

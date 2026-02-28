@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, ChevronRight, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -32,7 +33,7 @@ export function BranchSelectionModal({
     onClose();
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -45,14 +46,15 @@ export function BranchSelectionModal({
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
           />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg"
-          >
+          {/* Modal Container - using flexbox for centering instead of transforms */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="w-full max-w-lg pointer-events-auto"
+            >
             <div className="bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden">
               {/* Header */}
               <div className="px-6 py-4 border-b border-border bg-surface-raised/50">
@@ -168,8 +170,10 @@ export function BranchSelectionModal({
               </div>
             </div>
           </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

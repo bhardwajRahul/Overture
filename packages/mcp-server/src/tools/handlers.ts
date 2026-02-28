@@ -3,9 +3,10 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { StreamingXMLParser } from '../parser/xml-parser.js';
+import { parseStructuredOutput } from '../parser/output-parser.js';
 import { multiProjectPlanStore } from '../store/plan-store.js';
 import { wsManager } from '../websocket/ws-server.js';
-import { Plan, PlanNode, PlanEdge, NodeStatus, McpServer, ProjectContext, ResumePlanInfo } from '../types.js';
+import { Plan, PlanNode, PlanEdge, NodeStatus, McpServer, ProjectContext, ResumePlanInfo, StructuredOutput } from '../types.js';
 
 // Track parsers per project
 const currentParsers: Map<string, StreamingXMLParser> = new Map();
@@ -749,8 +750,18 @@ export function handleUpdateNodeStatus(
     return { success: false, message: `Node ${nodeId} not found`, projectId: effectiveProjectId };
   }
 
-  multiProjectPlanStore.updateNodeStatus(effectiveProjectId, nodeId, status, output);
-  wsManager.broadcastToProject(effectiveProjectId, { type: 'node_status_updated', nodeId, status, output, projectId: effectiveProjectId });
+  // Parse structured output if present
+  let structuredOutput: StructuredOutput | undefined;
+  if (output) {
+    const parsed = parseStructuredOutput(output);
+    if (parsed) {
+      structuredOutput = parsed;
+      console.error(`[Overture] Parsed structured output for node ${nodeId}:`, Object.keys(parsed).filter(k => k !== 'raw').join(', '));
+    }
+  }
+
+  multiProjectPlanStore.updateNodeStatus(effectiveProjectId, nodeId, status, output, structuredOutput);
+  wsManager.broadcastToProject(effectiveProjectId, { type: 'node_status_updated', nodeId, status, output, structuredOutput, projectId: effectiveProjectId });
 
   // Check if execution is paused
   const isPaused = multiProjectPlanStore.getIsPaused(effectiveProjectId);

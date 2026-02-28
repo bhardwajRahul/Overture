@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { X, AlertCircle, CheckCircle2, FileCode, Paperclip, FileText, Image, File, Trash2, Plus, MessageSquare, Save, Server } from 'lucide-react';
+import { X, AlertCircle, CheckCircle2, FileCode, Paperclip, FileText, Image, File, Trash2, Plus, MessageSquare, Save, Server, Eye } from 'lucide-react';
 import { usePlanStore, FileAttachment } from '@/stores/plan-store';
 import { useMultiProjectStore } from '@/stores/multi-project-store';
 import { DynamicFieldInput } from './DynamicFieldInput';
 import { BranchSelector } from './BranchSelector';
 import { McpMarketplaceModal } from '../Modals/McpMarketplaceModal';
+import { OutputModal } from '../Modals/OutputModal';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 
@@ -44,6 +45,7 @@ export function NodeDetailPanel() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialized, setInitialized] = useState<string | null>(null);
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
+  const [outputModalOpen, setOutputModalOpen] = useState(false);
 
   // Find the node from the correct plan (or search all plans)
   let node = null;
@@ -575,15 +577,19 @@ export function NodeDetailPanel() {
         </section>
 
         {/* Execution Output */}
-        {node.output && (
+        {(node.output || node.structuredOutput) && (
           <section>
             <h3 className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1 flex items-center gap-1">
               <CheckCircle2 className="w-2.5 h-2.5 text-accent-green" />
               Output
             </h3>
-            <pre className="text-[10px] text-text-secondary bg-canvas rounded-md p-2 overflow-x-auto font-mono max-h-32">
-              {node.output}
-            </pre>
+            <button
+              onClick={() => setOutputModalOpen(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-accent-blue/10 border border-accent-blue/30 text-accent-blue hover:bg-accent-blue/20 transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="text-xs font-medium">View Output</span>
+            </button>
           </section>
         )}
       </div>
@@ -621,6 +627,15 @@ export function NodeDetailPanel() {
         nodeId={node.id}
         planId={nodePlanId}
         currentMcps={node.mcpServers}
+      />
+
+      {/* Output Modal */}
+      <OutputModal
+        isOpen={outputModalOpen}
+        onClose={() => setOutputModalOpen(false)}
+        nodeTitle={node.title}
+        output={node.output}
+        structuredOutput={node.structuredOutput}
       />
     </motion.div>
   );

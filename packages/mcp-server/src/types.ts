@@ -68,6 +68,7 @@ export interface PlanNode {
   branchParent?: string;
   branchId?: string;
   output?: string;
+  structuredOutput?: StructuredOutput;
   attachments?: FileAttachment[];
   metaInstructions?: string;
   mcpServers?: McpServer[];
@@ -212,6 +213,70 @@ export interface ProjectPlanState extends PlanState {
   workspacePath: string;
 }
 
+// Structured Output Types - for rich node execution output
+export interface FileChange {
+  path: string;
+  linesAdded?: number;
+  linesRemoved?: number;
+  diff?: string;
+}
+
+export interface FileCreated {
+  path: string;
+  lines?: number;
+}
+
+export interface FileDeleted {
+  path: string;
+}
+
+export interface PackageInstalled {
+  name: string;
+  version?: string;
+  dev?: boolean;
+}
+
+export interface McpServerSetup {
+  name: string;
+  status: 'installed' | 'configured' | 'failed';
+  config?: string;
+}
+
+export interface WebSearchPerformed {
+  query: string;
+  resultsUsed?: number;
+}
+
+export interface ToolCallSummary {
+  name: string;
+  count: number;
+}
+
+export interface PreviewUrl {
+  type: string;
+  url: string;
+}
+
+export interface OutputNote {
+  type: 'info' | 'warning' | 'error';
+  message: string;
+}
+
+export interface StructuredOutput {
+  overview?: string;
+  filesChanged?: FileChange[];
+  filesCreated?: FileCreated[];
+  filesDeleted?: FileDeleted[];
+  packagesInstalled?: PackageInstalled[];
+  mcpSetup?: McpServerSetup[];
+  webSearches?: WebSearchPerformed[];
+  toolCalls?: ToolCallSummary[];
+  previewUrls?: PreviewUrl[];
+  notes?: OutputNote[];
+  // Raw output for fallback
+  raw?: string;
+}
+
 // WebSocket message types
 export type WSMessage =
   | { type: 'connected' }
@@ -219,7 +284,7 @@ export type WSMessage =
   | { type: 'node_added'; node: PlanNode; projectId?: string }
   | { type: 'edge_added'; edge: PlanEdge; projectId?: string }
   | { type: 'plan_ready'; projectId?: string }
-  | { type: 'node_status_updated'; nodeId: string; status: NodeStatus; output?: string; projectId?: string }
+  | { type: 'node_status_updated'; nodeId: string; status: NodeStatus; output?: string; structuredOutput?: StructuredOutput; projectId?: string }
   | { type: 'plan_completed'; projectId?: string }
   | { type: 'plan_failed'; error: string; projectId?: string }
   | { type: 'plan_paused'; projectId?: string }
