@@ -66,3 +66,6 @@ temp/
 
 # Local development
 .local/
+
+# Asset HTML (for screenshot generation)
+asset_html/
