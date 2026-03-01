@@ -1,245 +1,33 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/SixHq/Overture/main/assets/overture-logo-dark.png">
-    <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/overture-logo-light.png" alt="Overture" width="400">
-  </picture>
-</p>
+# Overture Features - Complete Documentation
 
-<p align="center">
-  <strong>See the plan before the code. Approve it. Then watch it execute.</strong>
-</p>
-
-<p align="center">
-  <a href="https://www.npmjs.com/package/overture-mcp"><img src="https://img.shields.io/npm/v/overture-mcp?style=for-the-badge&color=blue" alt="npm version"></a>
-  <a href="https://github.com/SixHq/Overture/actions"><img src="https://img.shields.io/github/actions/workflow/status/SixHq/Overture/ci.yml?branch=main&style=for-the-badge" alt="CI status"></a>
-  <a href="https://www.npmjs.com/package/overture-mcp"><img src="https://img.shields.io/npm/dm/overture-mcp?style=for-the-badge&color=orange" alt="npm downloads"></a>
-  <a href="https://github.com/SixHq/Overture/discussions"><img src="https://img.shields.io/github/discussions/SixHq/Overture?style=for-the-badge&color=purple" alt="Discussions"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="MIT License"></a>
-</p>
-
-<p align="center">
-  <a href="#-the-problem">Problem</a> •
-  <a href="#-the-solution">Solution</a> •
-  <a href="#-installation">Install</a> •
-  <a href="#-features">Features</a> •
-  <a href="#-mcp-marketplace">Marketplace</a> •
-  <a href="#-configuration">Config</a> •
-  <a href="https://github.com/SixHq/Overture/discussions">Discussions</a>
-</p>
-
-<br>
-
-<p align="center">
-
-https://github.com/user-attachments/assets/eeb9c4cb-c80d-42da-bf63-c0c4ecb1e5d6
-
-</p>
+This document contains detailed documentation for all Overture features. For a quick overview, see the [README](../README.md).
 
 ---
 
-## 🔥 The Problem
+## Table of Contents
 
-Every AI coding agent today — **Cursor**, **Claude Code**, **Cline**, **Copilot** — works the same way:
-
-<table>
-<tr>
-<td width="50%">
-
-### What Happens Now
-
-1. You type a prompt
-2. Agent **immediately starts writing code**
-3. You have **zero visibility** into what it's doing
-4. You realize it misunderstood your request
-5. **Hundreds of lines of code** need to be discarded
-6. You've wasted tokens, time, and patience
-
-</td>
-<td width="50%">
-
-### Text Plans Don't Help
-
-Some agents show plans as text in chat. But text fails to show:
-
-- **Dependencies** — which tasks depend on what?
-- **Branch points** — what alternative approaches exist?
-- **Context requirements** — which files, APIs, or secrets are needed?
-- **Complexity** — which steps are risky?
-- **Progress** — what's done, what's next?
-
-</td>
-</tr>
-</table>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/problem-illustration.png" alt="The Problem" width="700">
-</p>
+- [Interactive Plan Canvas](#interactive-plan-canvas)
+- [Node Details Panel](#node-details-panel)
+- [Dynamic Fields](#dynamic-fields-user-inputs)
+- [File Attachments](#file-attachments)
+- [Meta Instructions](#meta-instructions)
+- [Branch Detection & Selection](#branch-detection--selection)
+- [Requirements Checklist](#requirements-checklist)
+- [Execution Controls](#execution-controls)
+- [Structured Output](#structured-output)
+- [Output Modal](#output-modal)
+- [MCP Marketplace](#mcp-marketplace)
+- [Multi-Project Support](#multi-project-support)
+- [Plan History & Persistence](#plan-history--persistence)
+- [Dynamic Plan Modification](#dynamic-plan-modification)
+- [MCP Tools Reference](#mcp-tools-for-agent-developers)
+- [WebSocket Communication](#real-time-websocket-communication)
+- [Configuration](#configuration)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
 
 ---
 
-## ✨ The Solution
-
-**Overture** intercepts your AI agent's planning phase and renders it as an **interactive visual flowchart** — before any code is written.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/solution-screenshot.png" alt="Overture Solution" width="900">
-</p>
-
-### The agent doesn't write a single line of code until you approve the plan.
-
-<br>
-
-<table>
-<tr>
-<td align="center" width="20%">
-<img src="https://img.icons8.com/color/96/flow-chart.png" width="64"><br>
-<strong>Visual Plans</strong><br>
-<sub>Interactive flowchart with pan, zoom, and click-through navigation</sub>
-</td>
-<td align="center" width="20%">
-<img src="https://img.icons8.com/color/96/attach.png" width="64"><br>
-<strong>Attach Context</strong><br>
-<sub>Files, API keys, instructions per step</sub>
-</td>
-<td align="center" width="20%">
-<img src="https://img.icons8.com/color/96/split.png" width="64"><br>
-<strong>Choose Approaches</strong><br>
-<sub>Compare pros/cons of different paths</sub>
-</td>
-<td align="center" width="20%">
-<img src="https://img.icons8.com/color/96/lightning-bolt.png" width="64"><br>
-<strong>Real-time Execution</strong><br>
-<sub>Watch nodes light up with progress</sub>
-</td>
-<td align="center" width="20%">
-<img src="https://img.icons8.com/color/96/shop.png" width="64"><br>
-<strong>MCP Marketplace</strong><br>
-<sub>Browse & attach tools per node</sub>
-</td>
-</tr>
-</table>
-
----
-
-## 🚀 Installation
-
-Overture is an MCP server that works with **any MCP-compatible AI coding agent**. One command to install.
-
-### Claude Code
-
-```bash
-claude mcp add overture-mcp -- npx overture-mcp
-```
-
-### Cursor
-
-Add to `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "overture": {
-      "command": "npx",
-      "args": ["overture-mcp"]
-    }
-  }
-}
-```
-
-<details>
-<summary><strong>More Agents (Cline, Copilot, Sixth AI)</strong></summary>
-
-### Cline (VS Code Extension)
-
-Open VS Code settings → search "Cline MCP" → add:
-
-```json
-{
-  "mcpServers": {
-    "overture": {
-      "command": "npx",
-      "args": ["overture-mcp"]
-    }
-  }
-}
-```
-
-### GitHub Copilot
-
-Create `.vscode/mcp.json` in your project root:
-
-```json
-{
-  "servers": {
-    "overture": {
-      "command": "npx",
-      "args": ["overture-mcp"]
-    }
-  }
-}
-```
-
-> **Note:** GitHub Copilot MCP requires VS Code 1.99+ and uses `servers` instead of `mcpServers`.
-
-### Sixth AI (VS Code Extension)
-
-Add to your Sixth AI MCP settings file:
-
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json` |
-| Windows | `%APPDATA%\Code\User\globalStorage\sixth.sixth-ai\settings\sixth-mcp-settings.json` |
-| Linux | `~/.config/Code/User/globalStorage/sixth.sixth-ai/settings/sixth-mcp-settings.json` |
-
-```json
-{
-  "mcpServers": {
-    "overture": {
-      "command": "npx",
-      "args": ["overture-mcp"],
-      "disabled": false
-    }
-  }
-}
-```
-
-</details>
-
-### Global Installation (Optional)
-
-```bash
-npm install -g overture-mcp
-```
-
-### Verify It Works
-
-Give your agent any task. Overture automatically opens at `http://localhost:3031` with your plan ready for approval.
-
----
-
-## 🎯 How It Works
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/how-it-works.png" alt="How Overture Works" width="800">
-</p>
-
-**The Flow:**
-
-| Step | What Happens |
-|------|--------------|
-| **1. Prompt** | You give your agent a task: "Build a REST API with auth" |
-| **2. Plan** | Agent generates a detailed plan with steps, branches, and requirements |
-| **3. Visualize** | Overture renders the plan as an interactive graph |
-| **4. Enrich** | You click nodes, attach files, select branches, fill in API keys |
-| **5. Approve** | You click "Approve & Execute" (or press Enter) |
-| **6. Execute** | Watch real-time as nodes pulse, complete, or fail |
-| **7. Control** | Pause (Spacebar), resume, re-run nodes, or modify the plan mid-flight |
-
----
-
-## 🛠 Features
-
-### Interactive Plan Canvas
+## Interactive Plan Canvas
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-canvas.png" alt="Interactive Canvas" width="800">
@@ -258,7 +46,7 @@ Give your agent any task. Overture automatically opens at `http://localhost:3031
 
 ---
 
-### Node Details Panel
+## Node Details Panel
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-node-panel.png" alt="Node Details Panel" width="700">
@@ -276,7 +64,7 @@ Click any node to reveal its full details:
 
 ---
 
-### Dynamic Fields (User Inputs)
+## Dynamic Fields (User Inputs)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-dynamic-fields.png" alt="Dynamic Fields" width="600">
@@ -301,7 +89,7 @@ Each field includes:
 
 ---
 
-### File Attachments
+## File Attachments
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-attachments.png" alt="File Attachments" width="600">
@@ -316,7 +104,7 @@ Attach context files to specific nodes:
 
 ---
 
-### Meta Instructions
+## Meta Instructions
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-meta-instructions.png" alt="Meta Instructions" width="600">
@@ -332,7 +120,7 @@ Instructions are sent to the agent right before that node executes.
 
 ---
 
-### Branch Detection & Selection
+## Branch Detection & Selection
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-branching.png" alt="Branch Selection" width="800">
@@ -351,7 +139,7 @@ When the agent proposes multiple approaches:
 
 ---
 
-### Requirements Checklist
+## Requirements Checklist
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-checklist.png" alt="Requirements Checklist" width="400">
@@ -369,7 +157,7 @@ The Approve button stays disabled until all requirements are met.
 
 ---
 
-### Execution Controls
+## Execution Controls
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-execution.png" alt="Execution Controls" width="700">
@@ -392,7 +180,7 @@ The approval button is smart:
 
 ---
 
-### Structured Output
+## Structured Output
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-output.png" alt="Structured Output" width="700">
@@ -417,7 +205,7 @@ Each category is **expandable** — drill in without visual overload.
 
 ---
 
-### Output Modal
+## Output Modal
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-output-modal.png" alt="Output Modal" width="700">
@@ -431,7 +219,7 @@ Click any completed node to see full output:
 
 ---
 
-## 🏪 MCP Marketplace
+## MCP Marketplace
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/feature-marketplace.png" alt="MCP Marketplace" width="800">
@@ -452,7 +240,7 @@ When you attach an MCP server to a node, the agent gains access to those tools *
 
 ---
 
-## 📂 Multi-Project Support
+## Multi-Project Support
 
 Work on multiple projects simultaneously:
 
@@ -468,7 +256,7 @@ Single project? Tab bar hides automatically for a cleaner UI.
 
 ---
 
-## 📜 Plan History & Persistence
+## Plan History & Persistence
 
 Never lose your work:
 
@@ -495,7 +283,7 @@ When resuming, you get complete context:
 
 ---
 
-## ✏️ Dynamic Plan Modification
+## Dynamic Plan Modification
 
 Modify plans even during execution:
 
@@ -517,7 +305,7 @@ When a plan changes, see exactly what's different:
 
 ---
 
-## 🔌 MCP Tools (For Agent Developers)
+## MCP Tools (For Agent Developers)
 
 Overture exposes 11 MCP tools for agents to interact with:
 
@@ -537,7 +325,7 @@ Overture exposes 11 MCP tools for agents to interact with:
 
 ---
 
-## 🔄 Real-time WebSocket Communication
+## Real-time WebSocket Communication
 
 **19 server-to-client message types:**
 
@@ -553,7 +341,7 @@ When the WebSocket port is already in use, Overture automatically operates as a 
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -563,17 +351,13 @@ When the WebSocket port is already in use, Overture automatically operates as a 
 
 ### Setting Environment Variables
 
-<details>
-<summary><strong>Claude Code</strong></summary>
+#### Claude Code
 
 ```bash
 claude mcp add overture-mcp -e OVERTURE_HTTP_PORT=4000 -e OVERTURE_AUTO_OPEN=false -- npx overture-mcp
 ```
 
-</details>
-
-<details>
-<summary><strong>Cursor / Cline / Sixth AI</strong></summary>
+#### Cursor / Cline / Sixth AI
 
 ```json
 {
@@ -591,10 +375,7 @@ claude mcp add overture-mcp -e OVERTURE_HTTP_PORT=4000 -e OVERTURE_AUTO_OPEN=fal
 }
 ```
 
-</details>
-
-<details>
-<summary><strong>GitHub Copilot</strong></summary>
+#### GitHub Copilot
 
 ```json
 {
@@ -612,11 +393,9 @@ claude mcp add overture-mcp -e OVERTURE_HTTP_PORT=4000 -e OVERTURE_AUTO_OPEN=fal
 }
 ```
 
-</details>
-
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
@@ -626,7 +405,7 @@ claude mcp add overture-mcp -e OVERTURE_HTTP_PORT=4000 -e OVERTURE_AUTO_OPEN=fal
 
 ---
 
-## 🤝 Supported Agents
+## Supported Agents
 
 | Agent | Status | Notes |
 |-------|--------|-------|
@@ -637,108 +416,3 @@ claude mcp add overture-mcp -e OVERTURE_HTTP_PORT=4000 -e OVERTURE_AUTO_OPEN=fal
 | **Sixth AI** | ✅ Full | Built-in, zero config |
 
 Each agent has **custom-tailored prompts** for optimal plan generation.
-
----
-
-## 💪 Why Overture?
-
-<table>
-<tr>
-<td width="50%">
-
-### For Users
-
-- **Transparency** — See exactly what happens before code is written
-- **Control** — Approve, reject, or modify any plan
-- **Context** — Attach files and instructions to the right steps
-- **Choice** — Compare approaches and pick your path
-- **Visibility** — Real-time progress with rich output
-- **Safety** — Pause, resume, or re-run at any time
-- **History** — Resume any past plan instantly
-- **Efficiency** — No wasted tokens on rejected approaches
-
-</td>
-<td width="50%">
-
-### For AI Coding
-
-- **Trust** — Makes agents predictable and controllable
-- **Interpretability** — See AI reasoning before execution
-- **Universal** — Works with any MCP-compatible agent
-- **Extensible** — MCP Marketplace for tool discovery
-- **Open Source** — MIT licensed, community-driven
-- **Self-Contained** — No cloud dependencies
-- **Works Offline** — Fully local execution
-- **Multi-Project** — Manage multiple workspaces
-
-</td>
-</tr>
-</table>
-
----
-
-## 🧑‍💻 Development
-
-```bash
-# Clone the repo
-git clone https://github.com/SixHq/Overture.git
-cd Overture
-
-# Install dependencies
-npm install
-
-# Build all packages
-npm run build
-
-# Start MCP server (in one terminal)
-cd packages/mcp-server && npm start
-
-# Start UI dev server (in another terminal)
-cd packages/ui && npm run dev
-```
-
-### Tech Stack
-
-| Layer | Technologies |
-|-------|--------------|
-| **MCP Server** | Node.js, TypeScript, Express, WebSocket (ws), SAX XML Parser |
-| **UI** | React 18, React Flow, Zustand, Framer Motion, Tailwind CSS, Vite |
-| **Layout** | Dagre (automatic graph positioning) |
-
----
-
-## 🤝 Contributing
-
-Overture is open source and we welcome contributions!
-
-- 🐛 **Report bugs** at [GitHub Issues](https://github.com/SixHq/Overture/issues)
-- 💡 **Suggest features** at [GitHub Discussions](https://github.com/SixHq/Overture/discussions)
-- 📖 **Improve docs** — PRs welcome
-- 🔧 **Contribute code** — see [CONTRIBUTING.md](CONTRIBUTING.md)
-
-All contributions are appreciated, no matter how small.
-
----
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  <br>
-  <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/sixth-logo.png" alt="Sixth" width="120">
-  <br><br>
-  Built by <a href="https://trysixth.com"><strong>Sixth</strong></a>
-  <br><br>
-  For the best experience, try <a href="https://marketplace.visualstudio.com/items?itemName=Sixth.sixth-ai"><strong>Sixth for VS Code</strong></a><br>
-  Overture is built-in with zero configuration required.
-  <br><br>
-  <sub>Stop flying blind. See the plan. Approve it. Execute with confidence.</sub>
-</p>
-
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=SixHq/Overture&type=date&legend=top-left)](https://www.star-history.com/#SixHq/Overture&type=date&legend=top-left)
