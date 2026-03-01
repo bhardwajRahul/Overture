@@ -30,7 +30,7 @@
 <br>
 
 <p align="center">
-  <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjlpamJtaDBucnVsdGJqd3oxdG94OWdhNTYyazh4OWpucTE5YnF5ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/H14MYQfEAliJLvuayW/giphy.gif" alt="Overture Demo" width="900">
+  <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/hero-demo.gif" alt="Overture Demo" width="900">
 </p>
 
 ---

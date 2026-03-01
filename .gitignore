@@ -69,3 +69,6 @@ temp/
 
 # Asset HTML (for screenshot generation)
 asset_html/
+
+#heavy files
+.gif
