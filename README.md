@@ -30,7 +30,9 @@
 <br>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/SixHq/Overture/main/assets/hero-demo.gif" alt="Overture Demo" width="900">
+
+https://github.com/user-attachments/assets/eeb9c4cb-c80d-42da-bf63-c0c4ecb1e5d6
+
 </p>
 
 ---
