@@ -2,6 +2,8 @@ import express from 'express';
 import path from 'path';
 import { createServer } from 'http';
 import fs from 'fs';
+import fsp from 'fs/promises';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { handleSubmitPlan } from '../tools/handlers.js';
 
@@ -13,7 +15,7 @@ export function startHttpServer(port: number): void {
   const app = express();
 
   // Parse JSON bodies
-  app.use(express.json());
+  app.use(express.json({ limit: '25mb' }));
 
   // Serve static files from the UI dist directory
   // Use paths relative to this module's location (works regardless of cwd)
@@ -57,6 +59,33 @@ export function startHttpServer(port: number): void {
     } catch (error) {
       console.error('[Overture] Failed to fetch MCP marketplace:', error);
       res.status(500).json({ error: 'Failed to fetch MCP marketplace' });
+    }
+  });
+
+  app.post('/api/attachments/save', async (req, res) => {
+    try {
+      const { fileName, contentBase64 } = req.body as { fileName?: string; contentBase64?: string };
+
+      if (!fileName || !contentBase64) {
+        return res.status(400).json({ error: 'fileName and contentBase64 are required' });
+      }
+
+      const safeFileName = path.basename(fileName).replace(/[^\w.-]/g, '_');
+      const attachmentDir = path.join(os.homedir(), '.overture', 'attachments');
+      await fsp.mkdir(attachmentDir, { recursive: true });
+
+      const timestamp = Date.now();
+      const absolutePath = path.join(attachmentDir, `${timestamp}_${safeFileName}`);
+      const fileBuffer = Buffer.from(contentBase64, 'base64');
+      await fsp.writeFile(absolutePath, fileBuffer);
+
+      res.json({
+        absolutePath,
+        fileName: safeFileName,
+      });
+    } catch (error) {
+      console.error('[Overture] Failed to save attachment:', error);
+      res.status(500).json({ error: 'Failed to save attachment' });
     }
   });
 

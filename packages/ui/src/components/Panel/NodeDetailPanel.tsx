@@ -7,7 +7,7 @@ import { BranchSelector } from './BranchSelector';
 import { McpMarketplaceModal } from '../Modals/McpMarketplaceModal';
 import { OutputModal } from '../Modals/OutputModal';
 import { clsx } from 'clsx';
-import { useState } from 'react';
+import { type ChangeEvent, useRef, useState } from 'react';
 
 // Helper to determine file type from extension
 function getFileType(filename: string): FileAttachment['type'] {
@@ -31,8 +31,35 @@ function FileTypeIcon({ type }: { type: FileAttachment['type'] }) {
 // Pending file attachment (before saving)
 interface PendingFile {
   id: string;
+  name: string;
   path: string;
   description: string;
+}
+
+async function uploadAttachment(file: File): Promise<{ absolutePath: string; fileName: string }> {
+  const fileBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(fileBuffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+
+  const response = await fetch('/api/attachments/save', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fileName: file.name,
+      contentBase64: btoa(binary),
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Upload failed (${response.status})`);
+  }
+
+  return response.json();
 }
 
 export function NodeDetailPanel() {
@@ -46,6 +73,8 @@ export function NodeDetailPanel() {
   const [initialized, setInitialized] = useState<string | null>(null);
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
   const [outputModalOpen, setOutputModalOpen] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Find the node from the correct plan (or search all plans)
   let node = null;
@@ -106,22 +135,33 @@ export function NodeDetailPanel() {
     }
   };
 
-  // Add a new empty pending file row
-  const handleAddFileRow = () => {
-    setPendingFiles([...pendingFiles, {
-      id: `pending_${Date.now()}`,
-      path: '',
-      description: '',
-    }]);
-    setHasUnsavedChanges(true);
+  const handleOpenFilePicker = () => {
+    fileInputRef.current?.click();
   };
 
-  // Update path for a pending file
-  const handlePathChange = (pendingId: string, path: string) => {
-    setPendingFiles(pendingFiles.map(pf =>
-      pf.id === pendingId ? { ...pf, path } : pf
-    ));
-    setHasUnsavedChanges(true);
+  const handleFilePicked = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) return;
+
+    try {
+      setIsUploadingFile(true);
+      const uploaded = await uploadAttachment(selectedFile);
+      setPendingFiles((prev) => [
+        ...prev,
+        {
+          id: `pending_${Date.now()}`,
+          name: uploaded.fileName,
+          path: uploaded.absolutePath,
+          description: '',
+        },
+      ]);
+      setHasUnsavedChanges(true);
+    } catch (error) {
+      console.error('[NodeDetailPanel] Failed to upload attachment:', error);
+    } finally {
+      setIsUploadingFile(false);
+      event.target.value = '';
+    }
   };
 
   // Update description for a pending file
@@ -155,7 +195,7 @@ export function NodeDetailPanel() {
         const attachment: FileAttachment = {
           id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           path: pf.path.trim(),
-          name: pf.path.trim().split('/').pop() || pf.path.trim(),
+          name: pf.name || pf.path.trim().split('/').pop() || pf.path.trim(),
           type: getFileType(pf.path),
           description: pf.description.trim(),
         };
@@ -478,12 +518,19 @@ export function NodeDetailPanel() {
               <Paperclip className="w-2.5 h-2.5" />
               File Attachments
             </h3>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFilePicked}
+            />
             <button
-              onClick={handleAddFileRow}
+              onClick={handleOpenFilePicker}
+              disabled={isUploadingFile}
               className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-accent-blue hover:bg-accent-blue/10 transition-colors"
             >
               <Plus className="w-3 h-3" />
-              Add File
+              {isUploadingFile ? 'Uploading...' : 'Click Here To Select File'}
             </button>
           </div>
 
@@ -517,16 +564,13 @@ export function NodeDetailPanel() {
           {/* Pending file rows */}
           {pendingFiles.map((pf) => (
             <div key={pf.id} className="p-2 rounded-md bg-canvas border border-border mb-2">
-              {/* File path input */}
+              {/* Selected file path */}
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex-1">
-                  <input
-                    type="text"
-                    value={pf.path}
-                    onChange={(e) => handlePathChange(pf.id, e.target.value)}
-                    placeholder="/full/path/to/file.ext"
-                    className="w-full px-2 py-1.5 rounded-md bg-surface-raised border border-border text-xs text-text-primary placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-accent-blue font-mono"
-                  />
+                  <p className="text-[10px] text-text-muted mb-1">Selected file</p>
+                  <p className="w-full px-2 py-1.5 rounded-md bg-surface-raised border border-border text-xs text-text-primary font-mono truncate">
+                    {pf.path}
+                  </p>
                 </div>
 
                 <button
@@ -553,7 +597,7 @@ export function NodeDetailPanel() {
 
           {node.attachments.length === 0 && pendingFiles.length === 0 && (
             <p className="text-[10px] text-text-muted text-center py-2">
-              No files attached. Click "Add File" to attach files for the AI to reference.
+              No files attached. Click "Add File" to pick one file and attach it for the AI to reference.
             </p>
           )}
         </section>

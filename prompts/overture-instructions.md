@@ -10,6 +10,13 @@ You have access to Overture, a visual plan execution tool that displays your exe
 4. **Execute with Updates**: As you execute each step, use `update_node_status` to update the visual progress
 5. **Complete**: When done, call `plan_completed` or `plan_failed`
 
+## Consistency
+
+These rules are mandatory and must never be broken:
+
+- **ONE NODE EXECUTION AT A TIME**: Only one node must be executed at a time. Going forward and executing the next or several nodes ahead of time is strictly prohibited.
+- **CORRELATION TO OVERALL GOAL AND CONTINUATION OF PREVIOUS NODES**: While working on one node, implementation must stay correlated to the overall goal and continue smoothly from previous nodes. Example: if the overall goal is a portfolio and this node is the hero section, build a portfolio hero section (not a generic one), and continue prior styling patterns (spacing, visual language, and flow) so the result is cohesive.
+
 ## XML Plan Schema
 
 ```xml

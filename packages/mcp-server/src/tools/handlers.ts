@@ -13,6 +13,14 @@ const currentParsers: Map<string, StreamingXMLParser> = new Map();
 
 // Track current project context for legacy single-project calls
 let currentProjectId: string = 'default';
+const BRANCH_NODE_AGENT_MESSAGE =
+  'This is merely a branch to pick a decision which has already been done in the next node, DO Nothing, proceed to the next node to get decision';
+
+function isBranchByText(node: { title?: string; description?: string }): boolean {
+  const hasBranchInTitle = /\bbranch\b/i.test(node.title || '');
+  const hasBranchInDescription = /\bbranch\b/i.test(node.description || '');
+  return hasBranchInTitle || hasBranchInDescription;
+}
 
 /**
  * Generate a project ID from workspace path
@@ -791,11 +799,12 @@ export function handleUpdateNodeStatus(
   // If status is 'active', return full details about the current node
   if (status === 'active') {
     const config = nodeConfigs[nodeId] || { fieldValues: {}, attachments: [] };
+    const isBranchNode = isBranchByText(node);
     const currentNodeInfo: NextNodeInfo = {
       id: node.id,
       title: node.title,
       type: node.type,
-      description: node.description,
+      description: isBranchNode ? BRANCH_NODE_AGENT_MESSAGE : node.description,
       fieldValues: config.fieldValues || {},
       attachments: config.attachments || [],
       metaInstructions: config.metaInstructions,
@@ -853,6 +862,11 @@ function findNextNode(
   edges: ReturnType<typeof multiProjectPlanStore.getEdges>,
   provider: string
 ): NextNodeInfo | null {
+  const getAgentFacingNodeText = (node: (typeof nodes)[number]): { title: string; description: string } => ({
+    title: node.title,
+    description: isBranchByText(node) ? BRANCH_NODE_AGENT_MESSAGE : node.description,
+  });
+
   const selectedBranches = multiProjectPlanStore.getSelectedBranches(projectId);
   const nodeConfigs = multiProjectPlanStore.getNodeConfigs(projectId);
 
@@ -873,11 +887,12 @@ function findNextNode(
       const selectedNode = nodes.find(n => n.id === selectedTargetId);
       if (selectedNode && selectedNode.type !== 'decision') {
         const config = nodeConfigs[selectedNode.id] || { fieldValues: {}, attachments: [] };
+        const agentFacingText = getAgentFacingNodeText(selectedNode);
         return {
           id: selectedNode.id,
-          title: selectedNode.title,
+          title: agentFacingText.title,
           type: selectedNode.type,
-          description: selectedNode.description,
+          description: agentFacingText.description,
           fieldValues: config.fieldValues || {},
           attachments: config.attachments || [],
           metaInstructions: config.metaInstructions,
@@ -919,12 +934,13 @@ function findNextNode(
 
     // Found a valid next node - get its config
     const config = nodeConfigs[nextNode.id] || { fieldValues: {}, attachments: [] };
+    const agentFacingText = getAgentFacingNodeText(nextNode);
 
     return {
       id: nextNode.id,
-      title: nextNode.title,
+      title: agentFacingText.title,
       type: nextNode.type,
-      description: nextNode.description,
+      description: agentFacingText.description,
       fieldValues: config.fieldValues || {},
       attachments: config.attachments || [],
       metaInstructions: config.metaInstructions,
@@ -1497,4 +1513,3 @@ export async function handleGetUsageInstructions(agentType: string): Promise<{
     availableAgents,
   };
 }
-
